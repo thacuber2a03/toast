@@ -45,15 +45,15 @@ fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): std::Err {
 	t := c.current_
 	std::assert(t != null, "attempt to call an assertion outside of a test case")
 
-	if t^.res.code == 0 && !cond {
-		s := c^.red(sprintf("test '%s': assertion failed", t^.name))
+	if t.res.code == 0 && !cond {
+		s := c.red(sprintf("test '%s': assertion failed", t.name))
 		if msg != "" { s += sprintf("\nreason: '%s'", msg) }
 		eprint(s)
 
-		t^.res = c^.fail(s)
+		t.res = c.fail(s)
 	}
 
-	return t^.res
+	return t.res
 }
 
 fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): std::Err { return a.isTrue(!cond, msg) }
@@ -63,18 +63,18 @@ fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): std::Err {
 	t := c.current_
 	std::assert(t != null, "attempt to call an assertion outside of a test case")
 
-	if t^.res.code == 0 && e.code != 0 {
-		s := c^.red(sprintf(
+	if t.res.code == 0 && e.code != 0 {
+		s := c.red(sprintf(
 			"test '%s': error code is not std::StdErr.ok (%i)\n",
-			t^.name, e.code
+			t.name, e.code
 		))
 		
 		s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
 
-		eprint(s); t^.res = c^.fail(s, e.code)
+		eprint(s); t.res = c.fail(s, e.code)
 	}
 
-	return t^.res
+	return t.res
 }
 
 fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
@@ -113,7 +113,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 			didFail = true
 		} else {
 			passedTests++
-			eprint(c^.green(sprintf("test '%s': ok", t.name)))
+			eprint(c.green(sprintf("test '%s': ok", t.name)))
 		}
 		eprintln(sprintf(" (%fs)\n", time))
 
@@ -122,7 +122,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 
 	l := len(c.tests)
 	text := sprintf("%i of %i tests passed", passedTests, l)
-	if passedTests == l { text = c^.bold(c^.green(text)) }
+	if passedTests == l { text = c.bold(c.green(text)) }
 	eprintln(text)
 	c.current_ = null
 
