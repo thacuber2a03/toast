@@ -1,0 +1,35 @@
+// testing the test framework //
+// so meta                    //
+
+import ( "std.um"; "tests.um" )
+
+fn alwaysPass(T: ^tests::Context): std::Err {
+	e := T.assert.isTrue(1 + 2 == 3, "math doesn't work")
+	if e.code != 0 { return e }
+	return T.end()
+}
+
+fn alwaysFail(T: ^tests::Context): std::Err {
+	e := T.assert.isTrue(false, "logic works")
+	if e.code != 0 { return e }
+	return T.end()
+}
+
+fn failOnNonExistantFile(T: ^tests::Context): std::Err {
+	f, e := std::fopen("AJHSKJHDSKhdksjhdsjhsd.txt", "rb")
+
+	e = T.assert.isOk(e, "couldn't open non-existant file (as it's supposed to do)")
+	if e.code != 0 { return e }
+
+	return T.end()
+}
+
+fn main() {
+	T := tests::newContext()
+	T.registerTests({
+		"always pass": alwaysPass,
+		"always fail": alwaysFail,
+		"fake file": failOnNonExistantFile
+	})
+	T.run(true)
+}

@@ -1,0 +1,116 @@
+import "std.um"
+
+type (
+	TestFn* = fn (ctx: ^Context): std::Err
+	TestTuple = struct {
+		test: TestFn
+		name: str
+		res: std::Err
+	}
+
+	Assert = struct { ctx: weak ^Context }
+	Context* = struct {
+		tests: map[str]TestTuple
+		current_: weak ^TestTuple
+		assert: Assert
+	}
+	
+	Result* = struct {
+		result: std::Err
+		time: real
+	}
+)
+
+fn eprintln(text: str = "") { fprintf(std::stderr(), "%s\n", text) }
+fn eprint(text: str = "") { fprintf(std::stderr(), text) }
+
+fn newContext*(): ^Context {
+	c := new(Context)
+	c.assert = Assert { ctx: c }
+	return c
+}
+
+fn (c: ^Context) fail*(msg: str = "", code: int = -1): std::Err { return std::error(code, msg) }
+fn (c: ^Context) pass*(msg: str = ""): std::Err { return std::error(0, msg) }
+fn (c: ^Context) end*(): std::Err { return c.pass("test ended") }
+
+fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): std::Err {
+	t := a.ctx.current_
+
+	if t^.res.code == 0 && !cond {
+		s := sprintf("test '%s': assertion failed", t^.name)
+		if msg != "" { s += sprintf("\nreason: '%s'", msg) }
+		eprint(s)
+
+		t^.res = a.ctx^.fail(s)
+	}
+
+	return t^.res
+}
+
+fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): std::Err { return a.isTrue(!cond, msg) }
+
+fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): std::Err {
+	t := a.ctx.current_
+
+	if t^.res.code == 0 && e.code != 0 {
+		s := sprintf(
+			"test '%s': error code is not std::StdErr.ok (%i)\nreason: '%s'",
+			t^.name, e.code, msg != "" ? msg : e.msg
+		)
+
+		eprint(s); t^.res = a.ctx^.fail(s, e.code)
+	}
+
+	return t^.res
+}
+
+fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
+	e := sprintf("test '%s' already registered", name)
+	for n, t in c.tests { std::assert(name != n /* || test != t.test */, e) }
+
+	t := TestTuple {}
+	t.name = name
+	t.test = test
+	t.res = c.pass("test passed")
+	return t
+}
+
+fn (c: ^Context) registerTest*(name: str, test: TestFn) {
+	t := c.newTestTuple(name, test)
+	c.tests[name] = t
+}
+
+fn (c: ^Context) registerTests*(tests: map[str]TestFn) {
+	for name, test in tests { c.registerTest(name, test) }
+}
+
+fn (c: ^Context) run*(quitIfErr: bool): (bool, map[str]Result) {
+	results := make(map[str]Result)
+	didFail := false
+	passedTests := 0
+
+	for n, t^ in c.tests {
+		c.current_ = t
+
+		time := std::clock()
+		t.test(c)
+		time = std::clock() - time
+
+		if t.res.code != 0 {
+			didFail = true
+		} else {
+			passedTests++
+			eprint(sprintf("test '%s': ok", t.name))
+		}
+		eprintln(sprintf(" (%fs)\n", time))
+
+		results[n] = Result { result: t.res, time: time }
+	}
+
+	eprintln(sprintf("%i of %i tests passed", passedTests, len(c.tests)))
+	c.current_ = null
+
+	if quitIfErr && didFail { exit(-1) }
+	return didFail, results
+}
