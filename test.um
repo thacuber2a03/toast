@@ -26,10 +26,11 @@ fn failOnNonExistantFile(T: ^tests::Context): std::Err {
 
 fn main() {
 	T := tests::newContext()
+	T.fmtWithColor = true
 	T.registerTests({
 		"always pass": alwaysPass,
 		"always fail": alwaysFail,
 		"fake file": failOnNonExistantFile
 	})
-	T.run(true)
+	T.run()
 }

@@ -13,6 +13,7 @@ type (
 		tests: map[str]TestTuple
 		current_: weak ^TestTuple
 		assert: Assert
+		fmtWithColor: bool
 	}
 	
 	Result* = struct {
@@ -24,9 +25,14 @@ type (
 fn eprintln(text: str = "") { fprintf(std::stderr(), "%s\n", text) }
 fn eprint(text: str = "") { fprintf(std::stderr(), text) }
 
-fn newContext*(): ^Context {
+fn (c: ^Context) green(text: str): str { return c.fmtWithColor ? sprintf("\x1b[32m%s\x1b[39m", text) : text }
+fn (c: ^Context) red(text: str): str { return c.fmtWithColor ? sprintf("\x1b[31m%s\x1b[39m", text) : text }
+fn (c: ^Context) bold(text: str): str { return c.fmtWithColor ? sprintf("\x1b[1m%s\x1b[21m", text) : text }
+
+fn newContext*(col: bool = false): ^Context {
 	c := new(Context)
 	c.assert = Assert { ctx: c }
+	c.fmtWithColor = col
 	return c
 }
 
@@ -35,14 +41,16 @@ fn (c: ^Context) pass*(msg: str = ""): std::Err { return std::error(0, msg) }
 fn (c: ^Context) end*(): std::Err { return c.pass("test ended") }
 
 fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): std::Err {
-	t := a.ctx.current_
+	c := a.ctx
+	t := c.current_
+	std::assert(t != null, "attempt to call an assertion outside of a test case")
 
 	if t^.res.code == 0 && !cond {
-		s := sprintf("test '%s': assertion failed", t^.name)
+		s := c^.red(sprintf("test '%s': assertion failed", t^.name))
 		if msg != "" { s += sprintf("\nreason: '%s'", msg) }
 		eprint(s)
 
-		t^.res = a.ctx^.fail(s)
+		t^.res = c^.fail(s)
 	}
 
 	return t^.res
@@ -51,15 +59,19 @@ fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): std::Err {
 fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): std::Err { return a.isTrue(!cond, msg) }
 
 fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): std::Err {
-	t := a.ctx.current_
+	c := a.ctx
+	t := c.current_
+	std::assert(t != null, "attempt to call an assertion outside of a test case")
 
 	if t^.res.code == 0 && e.code != 0 {
-		s := sprintf(
-			"test '%s': error code is not std::StdErr.ok (%i)\nreason: '%s'",
-			t^.name, e.code, msg != "" ? msg : e.msg
-		)
+		s := c^.red(sprintf(
+			"test '%s': error code is not std::StdErr.ok (%i)\n",
+			t^.name, e.code
+		))
+		
+		s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
 
-		eprint(s); t^.res = a.ctx^.fail(s, e.code)
+		eprint(s); t^.res = c^.fail(s, e.code)
 	}
 
 	return t^.res
@@ -85,7 +97,7 @@ fn (c: ^Context) registerTests*(tests: map[str]TestFn) {
 	for name, test in tests { c.registerTest(name, test) }
 }
 
-fn (c: ^Context) run*(quitIfErr: bool): (bool, map[str]Result) {
+fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 	results := make(map[str]Result)
 	didFail := false
 	passedTests := 0
@@ -101,14 +113,17 @@ fn (c: ^Context) run*(quitIfErr: bool): (bool, map[str]Result) {
 			didFail = true
 		} else {
 			passedTests++
-			eprint(sprintf("test '%s': ok", t.name))
+			eprint(c^.green(sprintf("test '%s': ok", t.name)))
 		}
 		eprintln(sprintf(" (%fs)\n", time))
 
 		results[n] = Result { result: t.res, time: time }
 	}
 
-	eprintln(sprintf("%i of %i tests passed", passedTests, len(c.tests)))
+	l := len(c.tests)
+	text := sprintf("%i of %i tests passed", passedTests, l)
+	if passedTests == l { text = c^.bold(c^.green(text)) }
+	eprintln(text)
 	c.current_ = null
 
 	if quitIfErr && didFail { exit(-1) }
