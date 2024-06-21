@@ -26,6 +26,15 @@ fn passOnExistantFile(T: ^toast::Context) {
 	std::fclose(f)
 }
 
+fn assertEqual(T: ^toast::Context, a: int, b: int): bool {
+    return T.assert.isTrue(a == b, "expected a and b to be equal")
+}
+
+fn testCustomAssert(T: ^toast::Context) {
+	if !assertEqual(T, 1, 1) { return }
+	if !assertEqual(T, 1, 2) { return }
+}
+
 fn main() {
 	T := toast::newContext()
 	T.fmtWithColor = true

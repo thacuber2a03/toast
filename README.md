@@ -69,7 +69,7 @@ For example, here's how an `assertEqualTypes` function could be written
 using custom logic for some specific interface `T`:
 
 ```go
-fn assertEqualTypes(T: ^toast::Context, a: T, b: T): bool {
+fn assertEqualTypes(T: ^toast::Context, a, b: T): bool {
     if !selftypeeq(a, b) {
         T.fail("expected a and b to have the same type")
         return false
