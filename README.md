@@ -109,7 +109,7 @@ Runs each of the tests registered to this context, and returns:
 
 > [!IMPORTANT]
 > All of these are aliased to a specific `Context` (`(c: ^Context)`).
-> Will throw a fatal error if called outside of a test function.
+> They will all throw a fatal error if called outside of a test function.
 
 #### `fail(msg: str, code: int = -1): std::Err`
 
