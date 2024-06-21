@@ -58,8 +58,7 @@ fn sampleTest(T: ^toast::Context) {
 
 You set up any needed modules and variables, and then call
 one of the methods in the `.assert` struct to check for any conditions.
-As of now, the result must be checked for a non-zero error code and returned manually.
-The last thing you should do is to return `T.end()` or `T.pass()` to mark the end of the testing function.
+As of now, the result must be checked for a `false` value and the test returned from manually.
 
 ## API
 
@@ -95,7 +94,7 @@ The results of a test.
 #### `registerTests(tests: map[str]TestFn)`
 
 Registers various tests consecutively.
-Will throw a fatal error if the name is already registered with this context.
+Will throw a fatal error if any of the keys are registered as names for tests with this context.
 
 #### `registerTest(name: str, test: TestFn)`
 
