@@ -47,7 +47,7 @@ fn assertTypeEqual(T: ^toast::Context, a, b: any): bool {
 }
 
 fn customLogic(T: ^toast::Context) {
-    if !assertTypeEqual(T, 1, "ae") { return }
+    if !assertTypeEqual(T, 1, 2) { return }
 }
 
 fn testToast(T: ^toast::Context) {

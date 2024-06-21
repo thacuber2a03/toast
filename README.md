@@ -100,7 +100,10 @@ with the `assert.isTrue` call (for any two comparable types `T` and `U`):
 
 ```go
 fn assertEqual(T: ^toast::Context, a: T, b: U): bool {
-    return T.assert.isTrue(a == b, "expected a and b to be equal")
+    T.startCustom()
+    return T.endCustom(T.assert.isTrue(
+        a == b, "expected a and b to be equal"
+    ))
 }
 ```
 
