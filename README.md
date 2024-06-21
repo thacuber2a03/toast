@@ -70,7 +70,7 @@ The current version number of the library, formatted as specified by the
 
 #### `newContext(color: bool = false): ^Context`
 
-Sets up and returns a new `Context`.
+Sets up and returns a new, heap-allocated `Context`.
 `color` dictates whether the tests should print with color or not.
 
 #### `type TestFn = fn (T: ^Context)`
