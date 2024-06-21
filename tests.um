@@ -1,27 +1,44 @@
 import "std.um"
 
+//~~const VERSION
+// The current version number of the library, formatted as specified by
+// the [Semantic Versioning Specification](https://semver.org/).
 const VERSION* = "1.0"
+//~~
 
 type (
-	TestFn* = fn (ctx: ^Context): std::Err
-	TestTuple = struct {
-		test: TestFn
-		name: str
-		res: std::Err
-	}
 
-	Assert = struct { ctx: weak ^Context }
-	Context* = struct {
-		tests: map[str]TestTuple
-		current_: weak ^TestTuple
-		assert: Assert
-		fmtWithColor: bool
-	}
-	
-	Result* = struct {
-		result: std::Err
-		time: real
-	}
+//~~type TestFn
+// The signature of a test function.
+TestFn* = fn (ctx: ^Context): std::Err
+//~~
+
+TestTuple = struct {
+	test: TestFn
+	name: str
+	res: std::Err
+}
+
+Assert = struct { ctx: weak ^Context }
+
+//~~type Context
+// The definition of a testing context.
+Context* = struct {
+//~~
+	tests: map[str]TestTuple
+	current_: weak ^TestTuple
+	assert: Assert
+	fmtWithColor: bool
+}
+
+//~~type Result
+// The results of a test.
+Result* = struct {
+	result: std::Err
+	time: real
+}
+//~~
+
 )
 
 fn eprintln(text: str = "") { fprintf(std::stderr(), "%s\n", text) }
@@ -31,18 +48,44 @@ fn (c: ^Context) green(text: str): str { return c.fmtWithColor ? sprintf("\x1b[3
 fn (c: ^Context) red(text: str): str { return c.fmtWithColor ? sprintf("\x1b[31m%s\x1b[39m", text) : text }
 fn (c: ^Context) bold(text: str): str { return c.fmtWithColor ? sprintf("\x1b[1m%s\x1b[21m", text) : text }
 
+//~~fn newContext
+// Sets up and returns a new `Context`.
+// `color` dictates whether the tests should print with color or not.
 fn newContext*(color: bool = false): ^Context {
+//~~
 	c := new(Context)
 	c.assert = Assert { ctx: c }
 	c.fmtWithColor = col
 	return c
 }
 
-fn (c: ^Context) fail*(msg: str, code: int = -1): std::Err { return std::error(code, msg) }
-fn (c: ^Context) pass*(msg: str = ""): std::Err { return std::error(0, msg) }
-fn (c: ^Context) end*(): std::Err { return c.pass("test ended") }
+//~~fn (^Context) fail
+// Returns an std::Err marking a test as failed. You should immediately return this back to the caller.
+fn (c: ^Context) fail*(msg: str, code: int = -1): std::Err {
+//~~
+	return std::error(code, msg)
+}
 
+//~~fn (^Context) pass
+// Returns an std::Err marking a test as passing. You should immediately return this back to the caller.
+fn (c: ^Context) pass*(msg: str = ""): std::Err {
+//~~
+	return std::error(0, msg)
+}
+
+//~~fn (^Context) end
+// Returns an `std::Err` marking the end of a test.
+// This should be the last call to the test suite inside a test function, and should be immediately returned to the caller.
+fn (c: ^Context) end*(): std::Err {
+//~~
+	return c.pass("test ended")
+}
+
+//~~ fn (^Context) assert.isTrue
+// Asserts that `cond` is true. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
+// If `msg` is not `""`, prints an extra reason alongside the error.
 fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): std::Err {
+//~~
 	c := a.ctx
 	t := c.current_
 	std::assert(t != null, "attempt to call an assertion outside of a test case")
@@ -58,9 +101,19 @@ fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): std::Err {
 	return t.res
 }
 
-fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): std::Err { return a.isTrue(!cond, msg) }
+//~~ fn (^Context) assert.isTrue
+// Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
+// (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
+fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): std::Err {
+//~~
+	return a.isTrue(!cond, msg)
+}
 
+//~~ fn (c: ^Context) assert.isOk
+// Asserts that `e`'s code is 0. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
+// If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
 fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): std::Err {
+//~~
 	c := a.ctx
 	t := c.current_
 	std::assert(t != null, "attempt to call an assertion outside of a test case")
@@ -90,16 +143,31 @@ fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
 	return t
 }
 
+//~~fn (^Context) registerTest
+// Registers a single new test.
+// Will throw a fatal error if the name is already registered with this context.
 fn (c: ^Context) registerTest*(name: str, test: TestFn) {
+//~~
 	t := c.newTestTuple(name, test)
 	c.tests[name] = t
 }
 
+//~~fn (^Context) registerTests
+// Registers various tests consecutively.
+// Will throw a fatal error if the name is already registered with this context.
 fn (c: ^Context) registerTests*(tests: map[str]TestFn) {
+//~~
 	for name, test in tests { c.registerTest(name, test) }
 }
 
+//~~fn (^Context) run
+// Runs each of the tests registered to this context, and returns:
+// - Whether any single one of them had an error
+// - A map with the results of each one of the tests, with the key being the name of the test.
+//
+// `quitIfErr` exits the application after every test is run, if any single one of them has any errors.
 fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
+//~~
 	results := make(map[str]Result)
 	didFail := false
 	passedTests := 0

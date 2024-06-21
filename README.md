@@ -83,7 +83,7 @@ The definition of a testing context.
 
 #### `type Result = struct { result: std::Err; time: real }`
 
-The result of each test.
+The results of a test.
 
 ### Context functions
 
@@ -124,7 +124,8 @@ Returns an `std::Err` marking a test as passing. You should immediately return t
 
 #### `end(): std::Err`
 
-Returns an `std::Err` marking the end of a test. This should be the last call to the test suite, and should be immediately returned to the caller.
+Returns an `std::Err` marking the end of a test.
+This should be the last call to the test suite inside a test function, and should be immediately returned to the caller.
 
 #### `assert.isTrue(cond: bool, msg: str = ""): std::Err`
 
@@ -133,7 +134,7 @@ If `msg` is not `""`, prints an extra reason alongside the error.
 
 #### `assert.isFalse(cond: bool, msg: str = ""): std::Err`
 
-Asserts that `cond` is false. Everything from `assert.isTrue` applies.
+Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
 (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
 
 #### `assert.isOk(e: std::Err, msg: str = ""): std::Err`
