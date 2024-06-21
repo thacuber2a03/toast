@@ -1,5 +1,7 @@
 import "std.um"
 
+const VERSION* = "1.0"
+
 type (
 	TestFn* = fn (ctx: ^Context): std::Err
 	TestTuple = struct {
@@ -29,14 +31,14 @@ fn (c: ^Context) green(text: str): str { return c.fmtWithColor ? sprintf("\x1b[3
 fn (c: ^Context) red(text: str): str { return c.fmtWithColor ? sprintf("\x1b[31m%s\x1b[39m", text) : text }
 fn (c: ^Context) bold(text: str): str { return c.fmtWithColor ? sprintf("\x1b[1m%s\x1b[21m", text) : text }
 
-fn newContext*(col: bool = false): ^Context {
+fn newContext*(color: bool = false): ^Context {
 	c := new(Context)
 	c.assert = Assert { ctx: c }
 	c.fmtWithColor = col
 	return c
 }
 
-fn (c: ^Context) fail*(msg: str = "", code: int = -1): std::Err { return std::error(code, msg) }
+fn (c: ^Context) fail*(msg: str, code: int = -1): std::Err { return std::error(code, msg) }
 fn (c: ^Context) pass*(msg: str = ""): std::Err { return std::error(0, msg) }
 fn (c: ^Context) end*(): std::Err { return c.pass("test ended") }
 
