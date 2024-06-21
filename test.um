@@ -58,24 +58,25 @@ fn testToast(T: ^toast::Context) {
     }
 
     U := toast::newContext()
+    U.printWithColor = true
     U.registerTests({
-        "always pass": alwaysPass,
-        "always fail": alwaysFail,
-        "fake file": failOnNonExistantFile,
-        "real file": passOnExistantFile,
-        "custom assertion": customAssert,
-        "custom logic": customLogic
+        { name: "always pass",      func: alwaysPass            },
+        { name: "always fail",      func: alwaysFail            },
+        { name: "fake file",        func: failOnNonExistantFile },
+        { name: "real file",        func: passOnExistantFile    },
+        { name: "custom assertion", func: customAssert          },
+        { name: "custom logic",     func: customLogic           }
     })
-    _, results := U.run(false)
+    U.run(false)
     fprintf(std::stderr(), "\n")
 
-    for n, r in results {
+    for _, r in U.tests {
+        n := r.name
         state := (r.result.code == 0)
         if state != expected[n] {
             s := sprintf(
                 "expected '%s' to %s, but it %s",
-                n,
-                expected[n] ? "pass" : "fail",
+                n, expected[n] ? "pass" : "fail",
                 state ? "passed": "failed"
             )
             T.fail(s)
@@ -85,7 +86,11 @@ fn testToast(T: ^toast::Context) {
 }
 
 fn main() {
-    T := toast::newContext(true)
+    T := toast::newContext()
+
+    T.compactOutput = false
+    T.printWithColor = true
+
     T.registerTest("toast itself", testToast)
     T.run()
 }

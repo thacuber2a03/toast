@@ -3,8 +3,9 @@
 A small testing framework with no dependencies written in
 the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
-- Pretty simple; less than 200 lines, easy to read and modify/extend
+- Pretty simple; around 200-250 sloc, easy to read and modify/extend
 - Carries timing information and keeps track of test results
+- Can print testing information in a slick and straightforward format, or a verbose but insightful one
 
 ## Usage
 
