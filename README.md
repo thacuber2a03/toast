@@ -9,7 +9,7 @@ the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
 ### Creating a new test suite
 
-The simplest (and currently, only) way to create a test suite is to make a new Context,
+The simplest (and currently, only) way to create a test suite is to make a new `Context`,
 register one or more tests to it and then run it:
 
 ```go
@@ -73,7 +73,7 @@ The current version number of the library, formatted as specified by the
 Sets up and returns a new `Context`.
 `color` dictates whether the tests should print with color or not.
 
-#### `type TestFn = fn (T: ^Context): std::Err`
+#### `type TestFn = fn (T: ^Context)`
 
 The signature of a test function.
 
