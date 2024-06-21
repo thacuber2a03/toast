@@ -16,8 +16,8 @@ TestFn* = fn (ctx: ^Context)
 //~~type TestInfo
 // Information about a test.
 TestInfo* = struct {
-    func: TestFn
     name: str
+    func: TestFn
     result: std::Err
     time: real
 }
