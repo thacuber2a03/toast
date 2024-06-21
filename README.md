@@ -2,6 +2,9 @@
 A small testing framework with no dependencies written in
 the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
+- Pretty simple; easy to read, understand and modify/extend
+- Carries timing information and keeps track of test results
+
 ## Usage
 
 ### Creating a new test suite
@@ -9,7 +12,7 @@ the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 The simplest (and currently, only) way to create a test suite is to make a new Context,
 register one or more tests to it and then run it:
 
-```go
+```rust
 fn main() {
     t := tests::newContext()
     t.registerTests({
@@ -21,7 +24,7 @@ fn main() {
 ```
 
 Each test in the map passed to `registerTests` must have this signature:
-```go
+```rust
 type TestFn* = fn (T: ^Context): std::Err
 ```
 
@@ -29,7 +32,7 @@ type TestFn* = fn (T: ^Context): std::Err
 
 A sample test function goes like this:
 
-```go
+```rust
 import "std.um"
 
 fn sampleTest(T: ^tests::Context): std::Err {
