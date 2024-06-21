@@ -64,6 +64,7 @@ fn newContext*(color: bool = false): ^Context {
 fn (c: ^Context) fail*(msg: str, code: int = -1) {
 //~~
 	t := c.current
+	std::assert(t != null, "attempt to call fail() outside of a test case")
 	eprint(c.red(sprintf("test '%s': %s", t.name, msg)))
 	t.res = std::error(code, msg)
 }
@@ -73,6 +74,7 @@ fn (c: ^Context) fail*(msg: str, code: int = -1) {
 fn (c: ^Context) pass*(msg: str = "") {
 //~~
 	t := c.current
+	std::assert(t != null, "attempt to call pass() outside of a test case")
 	eprint(c.green(sprintf("test '%s': ok", t.name)))
 	t.res = std::error(0, msg)
 }
