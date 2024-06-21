@@ -15,13 +15,13 @@ register one or more tests to it and then run it:
 
 ```go
 fn main() {
-    t := toast::newContext()
-    t.registerTests({
+    T := toast::newContext()
+    T.registerTests({
         "test 1": test1,
         "test 2": test2,
     })
-    t.registerTest("test 3", test3)
-    t.run()
+    T.registerTest("test 3", test3)
+    T.run()
 }
 ```
 
@@ -59,6 +59,47 @@ fn sampleTest(T: ^toast::Context) {
 You set up any needed modules and variables, and then call
 one of the methods in the `.assert` struct to check for any conditions.
 As of now, the result must be checked for a `false` value and the test returned from manually.
+
+### Custom test functions
+
+You can also make custom test functions by, either mixing and matching assertions,
+or encoding your own logic with the help of the `fail` and `pass` functions.
+
+For example, here's how an `assertEqualTypes` function could be written
+using custom logic for some specific interface `T`:
+
+```go
+fn assertEqualTypes(T: ^toast::Context, a: T, b: T): bool {
+    if !selftypeeq(a, b) {
+        T.fail("expected a and b to have the same type")
+        return false
+    }
+
+    return true
+}
+```
+
+It can then be used as any other test function:
+
+```go
+// ...
+
+// this will pass
+if !assertEqualTypes(T, 1, 2) { return }
+// this will fail
+if !assertEqualTypes(T, 1, "aeiou") { return }
+
+// ...
+```
+
+Here's also a pretty pointless equal values assertion implemented
+with the `assert.isTrue` call (for any two comparable types `T` and `U`):
+
+```go
+fn assertEqual(T: ^toast::Context, a: T, b: U): bool {
+    return T.assert.isTrue(a == b, "expected a and b to be equal")
+}
+```
 
 ## Licensing
 
