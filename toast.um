@@ -18,7 +18,8 @@ TestFn* = fn (ctx: ^Context)
 TestInfo* = struct {
     func: TestFn
     name: str
-    res: std::Err
+    result: std::Err
+    time: real
 }
 //~~
 
@@ -27,18 +28,24 @@ Assert = struct { ctx: weak ^Context }
 //~~type Context
 // The definition of a testing context.
 Context* = struct {
-    tests: []TestInfo
-    current: weak ^TestInfo
-    assert: Assert
-    fmtWithColor: bool
-}
-//~~
+    // Fields:
 
-//~~type Result
-// The results of a test.
-Result* = struct {
-    result: std::Err
-    time: real
+    // `tests` - Holds all of the registered tests. You can query this array
+    // after calling `run()` to see the results and time taken for each test.
+    tests: []TestInfo
+
+    // `current` - A weak pointer to the currently processed test.
+    // It is only valid within the test functions.
+    current: weak ^TestInfo
+
+    // `assert` - Holds the assertion functions.
+    assert: Assert
+
+    // `printWithColor` - Toggles color printing.
+    printWithColor: bool
+
+    // `compactOutput` - Whether to use the compact or the verbose output.
+    compactOutput: bool
 }
 //~~
 
@@ -47,18 +54,24 @@ Result* = struct {
 fn eprintln(text: str = "") { fprintf(std::stderr(), "%s\n", text) }
 fn eprint(text: str = "") { fprintf(std::stderr(), text) }
 
-fn (c: ^Context) green(text: str): str { return c.fmtWithColor ? sprintf("\x1b[32m%s\x1b[39m", text) : text }
-fn (c: ^Context) red(text: str): str { return c.fmtWithColor ? sprintf("\x1b[31m%s\x1b[39m", text) : text }
-fn (c: ^Context) bold(text: str): str { return c.fmtWithColor ? sprintf("\x1b[1m%s\x1b[21m", text) : text }
+fn (c: ^Context) green(text: str): str { return c.printWithColor ? sprintf("\x1b[32m%s\x1b[m", text) : text }
+fn (c: ^Context) red(text: str): str { return c.printWithColor ? sprintf("\x1b[31m%s\x1b[m", text) : text }
+fn (c: ^Context) bold(text: str): str { return c.printWithColor ? sprintf("\x1b[1m%s\x1b[m", text) : text }
 
 //~~fn newContext
-// Sets up and returns a new `Context`.
-// `color` dictates whether the tests should print with color or not.
-fn newContext*(color: bool = false): ^Context {
+// Returns a new, default `Context`.
+//
+// Defaults:
+// - `compactOutput`: `true`
+// - `printWithColor`: `false`
+fn newContext*(): ^Context {
 //~~
     c := new(Context)
     c.assert = Assert { ctx: c }
-    c.fmtWithColor = color
+
+    c.compactOutput = true
+    c.printWithColor = false
+
     return c
 }
 
@@ -68,8 +81,14 @@ fn (c: ^Context) fail*(msg: str, code: int = -1) {
 //~~
     t := c.current
     std::assert(t != null, "attempt to call fail() outside of a test case")
-    eprint(c.red(sprintf("test '%s': %s", t.name, msg)))
-    t.res = std::error(code, msg)
+
+    s := c.bold("X")
+    if !c.compactOutput {
+        s = sprintf("test '%s': %s", t.name, msg)
+    }
+    eprint(c.red(s))
+
+    t.result = std::error(code, msg)
 }
 
 //~~fn (^Context) pass
@@ -78,8 +97,14 @@ fn (c: ^Context) pass*(msg: str = "") {
 //~~
     t := c.current
     std::assert(t != null, "attempt to call pass() outside of a test case")
-    eprint(c.green(sprintf("test '%s': ok", t.name)))
-    t.res = std::error(0, msg)
+
+    s := "O"
+    if !c.compactOutput {
+        s = sprintf("test '%s': %s", t.name, msg)
+    }
+    eprint(c.green(s))
+
+    t.result = std::error(0, msg)
 }
 
 //~~ fn (^Context) assert.isTrue
@@ -91,9 +116,9 @@ fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): bool {
     t := c.current
     std::assert(t != null, "attempt to call an assertion outside of a test case")
 
-    if t.res.code == 0 && !cond {
-        s := "assertion failed"
-        if msg != "" { s += sprintf("\nreason: '%s'", msg) }
+    if t.result.code == 0 && !cond {
+        s := "assertion failed!"
+        if msg != "" { s += sprintf(" reason: '%s'", msg) }
         c.fail(s)
         return false
     }
@@ -118,7 +143,7 @@ fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): bool {
     t := c.current
     std::assert(t != null, "attempt to call an assertion outside of a test case")
 
-    if t.res.code == 0 && e.code != 0 {
+    if t.result.code == 0 && e.code != 0 {
         s := sprintf("error code is not std::StdErr.ok (%i)\n", e.code)
         s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
         c.fail(s, e.code)
@@ -152,38 +177,57 @@ fn (c: ^Context) registerTest*(name: str, test: TestFn) {
 // Will throw a fatal error if any of the keys are registered as names for tests with this context.
 fn (c: ^Context) registerTests*(tests: []TestInfo) {
 //~~
-    for _, t in tests { c.tests = append(c.tests, t) }
+    for _, t in tests {
+        t.result.msg = "" // in case it was set
+        c.tests = append(c.tests, t)
+    }
 }
 
 //~~fn (^Context) run
-// Runs each of the tests registered to this context, and returns:
-// - Whether any single one of them had an error
-// - A map with the results of each one of the tests, with the key being the name of the test.
+// Runs each of the tests registered to this context, and returns whether any single one of them had an error.
 //
 // `quitIfErr` exits the application after every test is run, if any single one of them has any errors.
-fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
+fn (c: ^Context) run*(quitIfErr: bool = true): bool {
 //~~
-    results := make(map[str]Result)
     didFail := false
     passedTests := 0
+
+    if c.compactOutput { eprint("results: ") }
 
     for _, t^ in c.tests {
         c.current = t
 
         time := std::clock()
         t.func(c)
-        time = std::clock() - time
+        t.time = std::clock() - time
 
-        if t.res.code != 0 {
+        if t.result.code != 0 {
             didFail = true
         } else {
-            if t.res.msg == "" { c.pass("ok") }
+            if t.result.msg == "" { c.pass("ok") }
             passedTests++
         }
 
-        eprintln(sprintf(" (took %fs)\n", time))
+        if !c.compactOutput { eprintln(sprintf(" (took %fs)\n", t.time)) }
+    }
 
-        results[t.name] = Result { result: t.res, time: time }
+    if c.compactOutput {
+        eprintln("\n")
+        if didFail {
+            eprintln(c.red(c.bold("failed tests:\n")))
+
+            // TODO: should loop through all tests again?
+            for _, t^ in c.tests {
+                if t.result.code == 0 { continue }
+
+                msg := sprintf(
+                    "test '%s': %s",
+                    t.name, t.result.msg
+                )
+
+                eprintln(sprintf("%s (took %fs)\n", c.red(msg), t.time))
+            }
+        }
     }
 
     l := len(c.tests)
@@ -194,5 +238,5 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 
     c.current = null
     if quitIfErr && didFail { exit(-1) }
-    return didFail, results
+    return didFail
 }
