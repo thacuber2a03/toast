@@ -12,7 +12,7 @@ the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 The simplest (and currently, only) way to create a test suite is to make a new Context,
 register one or more tests to it and then run it:
 
-```rust
+```go
 fn main() {
     t := tests::newContext()
     t.registerTests({
@@ -24,7 +24,7 @@ fn main() {
 ```
 
 Each test in the map passed to `registerTests` must have this signature:
-```rust
+```go
 type TestFn* = fn (T: ^Context): std::Err
 ```
 
@@ -32,7 +32,7 @@ type TestFn* = fn (T: ^Context): std::Err
 
 A sample test function goes like this:
 
-```rust
+```go
 import "std.um"
 
 fn sampleTest(T: ^tests::Context): std::Err {
