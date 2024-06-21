@@ -20,7 +20,7 @@ TestInfo* = struct {
     func: TestFn
     result: std::Err
     time: real
-    depth: uint
+    funcDepth: uint
 }
 //~~
 
@@ -45,6 +45,9 @@ Context* = struct {
 
     // Whether to use the compact or the verbose output.
     compactOutput: bool
+
+    // The amount of custom assertions passed through so far.
+    customAsserts: uint
 }
 //~~
 
@@ -85,7 +88,7 @@ fn (c: ^Context) fail*(msg: str, code: int = -1) {
     if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
     eprint(c.red(s))
 
-    t.depth++
+    t.funcDepth++
     t.result = std::error(code, msg)
 }
 
@@ -100,7 +103,7 @@ fn (c: ^Context) pass*(msg: str = "") {
     if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
     eprint(c.green(s))
 
-    t.depth++
+    t.funcDepth++
     t.result = std::error(0, msg)
 }
 
@@ -114,7 +117,7 @@ fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
     std::assert(t != null, "attempt to call an assertion outside of a test case")
 
     if t.result.code == 0 && !cond {
-        t.depth++
+        t.funcDepth++
         s := "assertion failed!"
         if msg != "" { s += sprintf(" reason: '%s'", msg) }
         c.fail(s)
@@ -124,7 +127,7 @@ fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
     return true
 }
 
-//~~ fn (^Context) assert.isTrue
+//~~ fn (^Context) assert.isFalse
 // Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
 // (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
 fn (a: ^Assertions) isFalse*(cond: bool, msg: str = ""): bool {
@@ -132,7 +135,35 @@ fn (a: ^Assertions) isFalse*(cond: bool, msg: str = ""): bool {
     return a.isTrue(!cond, msg)
 }
 
-//~~ fn (c: ^Context) assert.isOk
+//~~fn (^Context) startCustom
+// Marks the start of a custom assertion.
+// This must be called at the beginning of all custom assertions.
+fn (c: ^Context) startCustom*() {
+//~~
+    std::assert(c.current != null, "attempt to call startCustom outside of a test suite")
+    c.customAsserts++
+    c.current.funcDepth += 2 // one more for this very function
+}
+
+//~~fn (^Context) endCustom
+// Marks the end of the custom assertion.
+// The intended return boolean must be passed through this
+// function and that must be returned instead:
+// `return T.endCustom(returnVal)`.
+fn (c: ^Context) endCustom*(res: bool): bool {
+//~~
+    std::assert(
+        c.current != null && c.customAsserts != 0,
+        "attempt to call endCustom outside a custom assertion"
+    )
+
+    c.customAsserts--
+    c.current.funcDepth--
+    // returning from this function decrements once more
+    return res
+}
+
+//~~fn (^Context) assert.isOk
 // Asserts that `e`'s code is 0. If the resulting `bool` is false, the caller should return immediately.
 // If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
 fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
@@ -142,6 +173,7 @@ fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
     std::assert(t != null, "attempt to call an assertion outside of a test case")
 
     if t.result.code == 0 && e.code != 0 {
+        t.funcDepth++
         s := sprintf("error code is not std::StdErr.ok (%i)\n", e.code)
         s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
         c.fail(s, e.code)
@@ -167,7 +199,8 @@ fn (c: ^Context) registerTest*(name: str, func: TestFn) {
 fn (c: ^Context) registerTests*(tests: []TestInfo) {
 //~~
     for _, t in tests {
-        t.result.msg = "" // in case it was set
+        // in case it was set, since it's checked for later
+        t.result.msg = ""
 
         n := t.name
         e := sprintf("test '%s' already registered", n)
@@ -219,7 +252,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
                     t.name, t.result.msg
                 )
 
-                pos := t.result.trace[t.depth]
+                pos := t.result.trace[t.funcDepth]
 
                 eprintln(sprintf(
                     "%s\nat file %s, line %i, took %fms\n",

@@ -3,7 +3,7 @@
 A small testing framework with no dependencies written in
 the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
-- Pretty simple; around 200-250 sloc, easy to read and modify/extend
+- Pretty simple; less than 300 sloc, easy to read and modify/extend
 - Carries timing information and keeps track of test results
 - Can print testing information in a slick and straightforward format, or a verbose but insightful one
 
@@ -71,12 +71,14 @@ using custom logic for some specific interface `T`:
 
 ```go
 fn assertEqualTypes(T: ^toast::Context, a, b: T): bool {
+    T.startCustom()
+
     if !selftypeeq(a, b) {
         T.fail("expected a and b to have the same type")
-        return false
+        return T.endCustom(false)
     }
 
-    return true
+    return T.endCustom(true)
 }
 ```
 
