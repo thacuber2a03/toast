@@ -185,10 +185,11 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 
     l := len(c.tests)
     text := sprintf("%i of %i tests passed", passedTests, l)
-    if passedTests == l { text = c.bold(c.green(text)) }
-    eprintln(text)
-    c.current = null
 
+    text = passedTests == l ? c.green(text) : c.red(text)
+    eprintln(c.bold(text))
+
+    c.current = null
     if quitIfErr && didFail { exit(-1) }
     return didFail, results
 }
