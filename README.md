@@ -20,6 +20,7 @@ fn main() {
         "test 1": test1,
         "test 2": test2,
     })
+    t.registerTest("test 3", test3)
     t.run()
 }
 ```
