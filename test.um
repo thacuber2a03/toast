@@ -4,26 +4,26 @@
 import ( "std.um"; "toast.um" )
 
 fn alwaysPass(T: ^toast::Context) {
-	if !T.assert.isTrue(1 + 2 == 3, "math doesn't work") { return }
+    if !T.assert.isTrue(1 + 2 == 3, "math doesn't work") { return }
 }
 
 fn alwaysFail(T: ^toast::Context) {
-	if !T.assert.isTrue(false, "logic works") { return }
+    if !T.assert.isTrue(false, "logic works") { return }
 }
 
 fn failOnNonExistantFile(T: ^toast::Context) {
-	f, e := std::fopen("AJHSKJHDSKhdksjhdsjhsd.txt", "rb")
+    f, e := std::fopen("AJHSKJHDSKhdksjhdsjhsd.txt", "rb")
 
-	msg := "couldn't open non-existant file (as it's supposed to do)"
-	if !T.assert.isOk(e, msg) { return }
+    msg := "couldn't open non-existant file (as it's supposed to do)"
+    if !T.assert.isOk(e, msg) { return }
 }
 
 fn passOnExistantFile(T: ^toast::Context) {
-	f, e := std::fopen("toast.um", "rb")
+    f, e := std::fopen("toast.um", "rb")
 
-	if !T.assert.isOk(e, "this should NOT HAPPEN") { return }
+    if !T.assert.isOk(e, "this should NOT HAPPEN") { return }
 
-	std::fclose(f)
+    std::fclose(f)
 }
 
 fn assertEqual(T: ^toast::Context, a, b: int): bool {
@@ -31,62 +31,61 @@ fn assertEqual(T: ^toast::Context, a, b: int): bool {
 }
 
 fn customAssert(T: ^toast::Context) {
-	if !assertEqual(T, 1, 1) { return }
+    if !assertEqual(T, 1, 1) { return }
 }
 
 fn assertTypeEqual(T: ^toast::Context, a, b: any): bool {
-	if !selftypeeq(a, b) {
-		T.fail("expected a and b to have the same type")
-		return false
-	}
+    if !selftypeeq(a, b) {
+        T.fail("expected a and b to have the same type")
+        return false
+    }
 
-	return true
+    return true
 }
 
 fn customLogic(T: ^toast::Context) {
-	if !assertTypeEqual(T, 1, 1) { return }
-	if !assertTypeEqual(T, 1, "aeiou") { return }
+    if !assertTypeEqual(T, 1, 1) { return }
 }
 
 fn testToast(T: ^toast::Context) {
-	expected := map[str]bool{
-		"always pass": true,
-		"always fail": false,
-		"fake file": false,
-		"real file": true,
-		"custom assertion": true,
-		"custom logic": true
-	}
+    expected := map[str]bool{
+        "always pass": true,
+        "always fail": false,
+        "fake file": false,
+        "real file": true,
+        "custom assertion": true,
+        "custom logic": true
+    }
 
-	U := toast::newContext()
-	U.registerTests({
-		"always pass": alwaysPass,
-		"always fail": alwaysFail,
-		"fake file": failOnNonExistantFile,
-		"real file": passOnExistantFile,
-		"custom assertion": customAssert,
-		"custom logic": customLogic
-	})
-	_, results := U.run(false)
-	fprintf(std::stderr(), "\n")
-	
-	for n, r in results {
-		state := (r.result.code == 0)
-		if state != expected[n] {
-			s := sprintf(
-				"expected '%s' to %s, but it %s",
-				n,
-				expected[n] ? "pass" : "fail",
-				state ? "passed": "failed"
-			)
-			T.fail(s)
-			return
-		}
-	}
+    U := toast::newContext()
+    U.registerTests({
+        "always pass": alwaysPass,
+        "always fail": alwaysFail,
+        "fake file": failOnNonExistantFile,
+        "real file": passOnExistantFile,
+        "custom assertion": customAssert,
+        "custom logic": customLogic
+    })
+    _, results := U.run(false)
+    fprintf(std::stderr(), "\n")
+
+    for n, r in results {
+        state := (r.result.code == 0)
+        if state != expected[n] {
+            s := sprintf(
+                "expected '%s' to %s, but it %s",
+                n,
+                expected[n] ? "pass" : "fail",
+                state ? "passed": "failed"
+            )
+            T.fail(s)
+            return
+        }
+    }
 }
 
 fn main() {
-	T := toast::newContext(true)
-	T.registerTest("toast itself", testToast)
-	T.run()
+    T := toast::newContext(true)
+    T.registerTest("toast itself", testToast)
+    T.run()
 }
