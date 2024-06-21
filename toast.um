@@ -23,7 +23,7 @@ TestInfo* = struct {
 }
 //~~
 
-Assert = struct { ctx: weak ^Context }
+Assertions = struct { ctx: weak ^Context }
 
 //~~type Context
 // The definition of a testing context.
@@ -39,7 +39,7 @@ Context* = struct {
     current: weak ^TestInfo
 
     // `assert` - Holds the assertion functions.
-    assert: Assert
+    assert: Assertions
 
     // `printWithColor` - Toggles color printing.
     printWithColor: bool
@@ -67,7 +67,7 @@ fn (c: ^Context) bold(text: str): str { return c.printWithColor ? sprintf("\x1b[
 fn newContext*(): ^Context {
 //~~
     c := new(Context)
-    c.assert = Assert { ctx: c }
+    c.assert = Assertions { ctx: c }
 
     c.compactOutput = true
     c.printWithColor = false
@@ -110,7 +110,7 @@ fn (c: ^Context) pass*(msg: str = "") {
 //~~ fn (^Context) assert.isTrue
 // Asserts that `cond` is true. If the resulting `bool` is false, the caller should return immediately.
 // If `msg` is not `""`, prints an extra reason alongside the error.
-fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): bool {
+fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
 //~~
     c := a.ctx
     t := c.current
@@ -129,7 +129,7 @@ fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): bool {
 //~~ fn (^Context) assert.isTrue
 // Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
 // (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
-fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): bool {
+fn (a: ^Assertions) isFalse*(cond: bool, msg: str = ""): bool {
 //~~
     return a.isTrue(!cond, msg)
 }
@@ -137,7 +137,7 @@ fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): bool {
 //~~ fn (c: ^Context) assert.isOk
 // Asserts that `e`'s code is 0. If the resulting `bool` is false, the caller should return immediately.
 // If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
-fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): bool {
+fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
 //~~
     c := a.ctx
     t := c.current
