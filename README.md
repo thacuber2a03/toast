@@ -27,7 +27,7 @@ fn main() {
 
 Each test in the map passed to `registerTests` must have this signature:
 ```go
-type TestFn* = fn (T: ^Context): std::Err
+type TestFn* = fn (T: ^Context)
 ```
 
 ### Test functions
@@ -134,7 +134,7 @@ If `msg` is not `""`, prints an extra reason alongside the error.
 Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
 (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
 
-#### `assert.isOk(e: std::Err, msg: str = ""): std::Err`
+#### `assert.isOk(e: std::Err, msg: str = ""): bool`
 
 Asserts that `e`'s code is 0. If the resulting `bool` is false, the caller should return immediately.
 If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
