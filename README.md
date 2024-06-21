@@ -60,44 +60,44 @@ The last thing you should do is to return `T.end()` or `T.pass()` to mark the en
 
 ### Exported types/values
 
-#### const VERSION
+#### `const VERSION`
 
 The current version number of the library, formatted as specified by the
 [Semantic Versioning Specification](https://semver.org/).
 
-#### newContext(color: bool = false): ^Context
+#### `newContext(color: bool = false): ^Context`
 
 Sets up and returns a new `Context`.
 `color` dictates whether the tests should print with color or not.
 
-#### type TestFn = fn (T: ^Context): std::Err
+#### `type TestFn = fn (T: ^Context): std::Err`
 
 The signature of a test function.
 
-#### type Context = struct { ... }
+#### `type Context = struct { ... }`
 
 The definition of a testing context.
 
-#### type Result = struct { result: std::Err; time: real }
+#### `type Result = struct { result: std::Err; time: real }`
 
 The result of each test.
 
 ### Context functions
 
 > [!IMPORTANT]
-> All of these are aliased to `Context` (`(c: ^Context)`).
+> All of these are aliased to a specific `Context` (`(c: ^Context)`).
 
-#### registerTests(tests: map[str]TestFn)
+#### `registerTests(tests: map[str]TestFn)`
 
 Registers various tests consecutively.
 Will throw a fatal error if the name is already registered with this context.
 
-#### registerTest(name: str, test: TestFn)
+#### `registerTest(name: str, test: TestFn)`
 
 Registers a single new test.
 Will throw a fatal error if the name is already registered with this context.
 
-#### run(quitIfErr: bool = true): (bool, map[str]Result)
+#### `run(quitIfErr: bool = true): (bool, map[str]Result)`
 
 Runs each of the tests registered to this context, and returns:
 - Whether any single one of them had an error
@@ -107,29 +107,32 @@ Runs each of the tests registered to this context, and returns:
 
 ### Test suite
 
-#### fail(msg: str, code: int = -1): std::Err
+> [!IMPORTANT]
+> All of these are aliased to a specific `Context` (`(c: ^Context)`).
+
+#### `fail(msg: str, code: int = -1): std::Err`
 
 Returns an `std::Err` marking a test as failed. You should immediately return this back to the caller.
 
-#### pass(msg: str): std::Err
+#### `pass(msg: str): std::Err`
 
 Returns an `std::Err` marking a test as passing. You should immediately return this back to the caller.
 
-#### end(): std::Err
+#### `end(): std::Err`
 
 Returns an `std::Err` marking the end of a test. This should be the last call to the test suite, and should be immediately returned to the caller.
 
-#### assert.isTrue(cond: bool, msg: str = ""): std::Err
+#### `assert.isTrue(cond: bool, msg: str = ""): std::Err`
 
 Asserts that `cond` is true. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
 If `msg` is not `""`, prints an extra reason alongside the error.
 
-#### assert.isFalse(cond: bool, msg: str = ""): std::Err
+#### `assert.isFalse(cond: bool, msg: str = ""): std::Err`
 
 Asserts that `cond` is false. Everything from `assert.isTrue` applies.
 (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
 
-#### assert.isOk(e: std::Err, msg: str = ""): std::Err
+#### `assert.isOk(e: std::Err, msg: str = ""): std::Err`
 
 Asserts that `e`'s code is 0. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
 If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
