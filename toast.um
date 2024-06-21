@@ -14,9 +14,9 @@ TestFn* = fn (ctx: ^Context)
 //~~
 
 TestTuple = struct {
-	test: TestFn
-	name: str
-	res: std::Err
+    test: TestFn
+    name: str
+    res: std::Err
 }
 
 Assert = struct { ctx: weak ^Context }
@@ -24,18 +24,18 @@ Assert = struct { ctx: weak ^Context }
 //~~type Context
 // The definition of a testing context.
 Context* = struct {
-	tests: map[str]TestTuple
-	current: weak ^TestTuple
-	assert: Assert
-	fmtWithColor: bool
+    tests: map[str]TestTuple
+    current: weak ^TestTuple
+    assert: Assert
+    fmtWithColor: bool
 }
 //~~
 
 //~~type Result
 // The results of a test.
 Result* = struct {
-	result: std::Err
-	time: real
+    result: std::Err
+    time: real
 }
 //~~
 
@@ -53,30 +53,30 @@ fn (c: ^Context) bold(text: str): str { return c.fmtWithColor ? sprintf("\x1b[1m
 // `color` dictates whether the tests should print with color or not.
 fn newContext*(color: bool = false): ^Context {
 //~~
-	c := new(Context)
-	c.assert = Assert { ctx: c }
-	c.fmtWithColor = color
-	return c
+    c := new(Context)
+    c.assert = Assert { ctx: c }
+    c.fmtWithColor = color
+    return c
 }
 
 //~~fn (^Context) fail
 // Marks this test as failed. You should immediately return once calling this.
 fn (c: ^Context) fail*(msg: str, code: int = -1) {
 //~~
-	t := c.current
-	std::assert(t != null, "attempt to call fail() outside of a test case")
-	eprint(c.red(sprintf("test '%s': %s", t.name, msg)))
-	t.res = std::error(code, msg)
+    t := c.current
+    std::assert(t != null, "attempt to call fail() outside of a test case")
+    eprint(c.red(sprintf("test '%s': %s", t.name, msg)))
+    t.res = std::error(code, msg)
 }
 
 //~~fn (^Context) pass
 // Marks this test as passing. You should immediately return once calling this.
 fn (c: ^Context) pass*(msg: str = "") {
 //~~
-	t := c.current
-	std::assert(t != null, "attempt to call pass() outside of a test case")
-	eprint(c.green(sprintf("test '%s': ok", t.name)))
-	t.res = std::error(0, msg)
+    t := c.current
+    std::assert(t != null, "attempt to call pass() outside of a test case")
+    eprint(c.green(sprintf("test '%s': ok", t.name)))
+    t.res = std::error(0, msg)
 }
 
 //~~ fn (^Context) assert.isTrue
@@ -84,18 +84,18 @@ fn (c: ^Context) pass*(msg: str = "") {
 // If `msg` is not `""`, prints an extra reason alongside the error.
 fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): bool {
 //~~
-	c := a.ctx
-	t := c.current
-	std::assert(t != null, "attempt to call an assertion outside of a test case")
+    c := a.ctx
+    t := c.current
+    std::assert(t != null, "attempt to call an assertion outside of a test case")
 
-	if t.res.code == 0 && !cond {
-		s := "assertion failed"
-		if msg != "" { s += sprintf("\nreason: '%s'", msg) }
-		c.fail(s)
-		return false
-	}
-	
-	return true
+    if t.res.code == 0 && !cond {
+        s := "assertion failed"
+        if msg != "" { s += sprintf("\nreason: '%s'", msg) }
+        c.fail(s)
+        return false
+    }
+
+    return true
 }
 
 //~~ fn (^Context) assert.isTrue
@@ -103,7 +103,7 @@ fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): bool {
 // (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
 fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): bool {
 //~~
-	return a.isTrue(!cond, msg)
+    return a.isTrue(!cond, msg)
 }
 
 //~~ fn (c: ^Context) assert.isOk
@@ -111,28 +111,28 @@ fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): bool {
 // If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
 fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): bool {
 //~~
-	c := a.ctx
-	t := c.current
-	std::assert(t != null, "attempt to call an assertion outside of a test case")
+    c := a.ctx
+    t := c.current
+    std::assert(t != null, "attempt to call an assertion outside of a test case")
 
-	if t.res.code == 0 && e.code != 0 {
-		s := sprintf("error code is not std::StdErr.ok (%i)\n", e.code)
-		s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
-		c.fail(s, e.code)
-		return false
-	}
+    if t.res.code == 0 && e.code != 0 {
+        s := sprintf("error code is not std::StdErr.ok (%i)\n", e.code)
+        s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
+        c.fail(s, e.code)
+        return false
+    }
 
-	return true
+    return true
 }
 
 fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
-	e := sprintf("test '%s' already registered", name)
-	for n, t in c.tests { std::assert(name != n /* || test != t.test */, e) }
+    e := sprintf("test '%s' already registered", name)
+    for n, t in c.tests { std::assert(name != n /* || test != t.test */, e) }
 
-	t := TestTuple {}
-	t.name = name
-	t.test = test
-	return t
+    t := TestTuple {}
+    t.name = name
+    t.test = test
+    return t
 }
 
 //~~fn (^Context) registerTest
@@ -140,16 +140,16 @@ fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
 // Will throw a fatal error if the name is already registered with this context.
 fn (c: ^Context) registerTest*(name: str, test: TestFn) {
 //~~
-	t := c.newTestTuple(name, test)
-	c.tests[name] = t
+    t := c.newTestTuple(name, test)
+    c.tests[name] = t
 }
 
 //~~fn (^Context) registerTests
 // Registers various tests consecutively.
-// Will throw a fatal error if the name is already registered with this context.
+// Will throw a fatal error if any of the keys are registered as names for tests with this context.
 fn (c: ^Context) registerTests*(tests: map[str]TestFn) {
 //~~
-	for name, test in tests { c.registerTest(name, test) }
+    for name, test in tests { c.registerTest(name, test) }
 }
 
 //~~fn (^Context) run
@@ -160,35 +160,35 @@ fn (c: ^Context) registerTests*(tests: map[str]TestFn) {
 // `quitIfErr` exits the application after every test is run, if any single one of them has any errors.
 fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 //~~
-	results := make(map[str]Result)
-	didFail := false
-	passedTests := 0
+    results := make(map[str]Result)
+    didFail := false
+    passedTests := 0
 
-	for n, t^ in c.tests {
-		c.current = t
+    for n, t^ in c.tests {
+        c.current = t
 
-		time := std::clock()
-		t.test(c)
-		time = std::clock() - time
+        time := std::clock()
+        t.test(c)
+        time = std::clock() - time
 
-		if t.res.code != 0 {
-			didFail = true
-		} else {
-			if t.res.msg == "" { c.pass("ok") }
-			passedTests++
-		}
+        if t.res.code != 0 {
+            didFail = true
+        } else {
+            if t.res.msg == "" { c.pass("ok") }
+            passedTests++
+        }
 
-		eprintln(sprintf(" (took %fs)\n", time))
+        eprintln(sprintf(" (took %fs)\n", time))
 
-		results[n] = Result { result: t.res, time: time }
-	}
+        results[n] = Result { result: t.res, time: time }
+    }
 
-	l := len(c.tests)
-	text := sprintf("%i of %i tests passed", passedTests, l)
-	if passedTests == l { text = c.bold(c.green(text)) }
-	eprintln(text)
-	c.current = null
+    l := len(c.tests)
+    text := sprintf("%i of %i tests passed", passedTests, l)
+    if passedTests == l { text = c.bold(c.green(text)) }
+    eprintln(text)
+    c.current = null
 
-	if quitIfErr && didFail { exit(-1) }
-	return didFail, results
+    if quitIfErr && didFail { exit(-1) }
+    return didFail, results
 }
