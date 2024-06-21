@@ -20,6 +20,7 @@ TestInfo* = struct {
     func: TestFn
     result: std::Err
     time: real
+    depth: uint
 }
 //~~
 
@@ -81,11 +82,10 @@ fn (c: ^Context) fail*(msg: str, code: int = -1) {
     std::assert(t != null, "attempt to call fail() outside of a test case")
 
     s := c.bold("X")
-    if !c.compactOutput {
-        s = sprintf("test '%s': %s", t.name, msg)
-    }
+    if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
     eprint(c.red(s))
 
+    t.depth++
     t.result = std::error(code, msg)
 }
 
@@ -97,11 +97,10 @@ fn (c: ^Context) pass*(msg: str = "") {
     std::assert(t != null, "attempt to call pass() outside of a test case")
 
     s := "O"
-    if !c.compactOutput {
-        s = sprintf("test '%s': %s", t.name, msg)
-    }
+    if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
     eprint(c.green(s))
 
+    t.depth++
     t.result = std::error(0, msg)
 }
 
@@ -115,6 +114,7 @@ fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
     std::assert(t != null, "attempt to call an assertion outside of a test case")
 
     if t.result.code == 0 && !cond {
+        t.depth++
         s := "assertion failed!"
         if msg != "" { s += sprintf(" reason: '%s'", msg) }
         c.fail(s)
@@ -219,7 +219,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
                     t.name, t.result.msg
                 )
 
-                pos := t.result.trace[0]
+                pos := t.result.trace[t.depth]
 
                 eprintln(sprintf(
                     "%s\nat file %s, line %i, took %fms\n",
