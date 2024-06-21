@@ -61,9 +61,9 @@ You set up any needed modules and variables, and then call
 one of the methods in the `.assert` struct to check for any conditions.
 As of now, the result must be checked for a `false` value and the test returned from manually.
 
-### Custom test functions
+### Custom assertions
 
-You can also make custom test functions by, either mixing and matching assertions,
+You can also make custom assertion functions by, either mixing and matching assertions,
 or encoding your own logic with the help of the `fail` and `pass` functions.
 
 For example, here's how an `assertEqualTypes` function could be written
