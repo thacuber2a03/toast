@@ -28,23 +28,21 @@ Assertions = struct { ctx: weak ^Context }
 //~~type Context
 // The definition of a testing context.
 Context* = struct {
-    // Fields:
-
-    // `tests` - Holds all of the registered tests. You can query this array
+    // Holds all of the registered tests. You can query this array
     // after calling `run()` to see the results and time taken for each test.
     tests: []TestInfo
 
-    // `current` - A weak pointer to the currently processed test.
+    // A weak pointer to the currently processed test.
     // It is only valid within the test functions.
     current: weak ^TestInfo
 
-    // `assert` - Holds the assertion functions.
+    // Holds the assertion functions.
     assert: Assertions
 
-    // `printWithColor` - Toggles color printing.
+    // Toggles color printing.
     printWithColor: bool
 
-    // `compactOutput` - Whether to use the compact or the verbose output.
+    // Whether to use the compact or the verbose output.
     compactOutput: bool
 }
 //~~
