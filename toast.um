@@ -13,19 +13,22 @@ type (
 TestFn* = fn (ctx: ^Context)
 //~~
 
-TestTuple = struct {
-    test: TestFn
+//~~type TestInfo
+// Information about a test.
+TestInfo* = struct {
+    func: TestFn
     name: str
     res: std::Err
 }
+//~~
 
 Assert = struct { ctx: weak ^Context }
 
 //~~type Context
 // The definition of a testing context.
 Context* = struct {
-    tests: map[str]TestTuple
-    current: weak ^TestTuple
+    tests: []TestInfo
+    current: weak ^TestInfo
     assert: Assert
     fmtWithColor: bool
 }
@@ -125,13 +128,13 @@ fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): bool {
     return true
 }
 
-fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
+fn (c: ^Context) newTestInfo(name: str, func: TestFn): TestInfo {
     e := sprintf("test '%s' already registered", name)
-    for n, t in c.tests { std::assert(name != n /* || test != t.test */, e) }
+    for _, t^ in c.tests { std::assert(name != t.name, e) }
 
-    t := TestTuple {}
+    t := TestInfo {}
     t.name = name
-    t.test = test
+    t.func = func
     return t
 }
 
@@ -140,16 +143,16 @@ fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
 // Will throw a fatal error if the name is already registered with this context.
 fn (c: ^Context) registerTest*(name: str, test: TestFn) {
 //~~
-    t := c.newTestTuple(name, test)
-    c.tests[name] = t
+    t := c.newTestInfo(name, test)
+    c.tests = append(c.tests, t)
 }
 
 //~~fn (^Context) registerTests
 // Registers various tests consecutively.
 // Will throw a fatal error if any of the keys are registered as names for tests with this context.
-fn (c: ^Context) registerTests*(tests: map[str]TestFn) {
+fn (c: ^Context) registerTests*(tests: []TestInfo) {
 //~~
-    for name, test in tests { c.registerTest(name, test) }
+    for _, t in tests { c.tests = append(c.tests, t) }
 }
 
 //~~fn (^Context) run
@@ -164,11 +167,11 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
     didFail := false
     passedTests := 0
 
-    for n, t^ in c.tests {
+    for _, t^ in c.tests {
         c.current = t
 
         time := std::clock()
-        t.test(c)
+        t.func(c)
         time = std::clock() - time
 
         if t.res.code != 0 {
@@ -180,7 +183,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 
         eprintln(sprintf(" (took %fs)\n", time))
 
-        results[n] = Result { result: t.res, time: time }
+        results[t.name] = Result { result: t.res, time: time }
     }
 
     l := len(c.tests)

@@ -59,12 +59,12 @@ fn testToast(T: ^toast::Context) {
 
     U := toast::newContext()
     U.registerTests({
-        "always pass": alwaysPass,
-        "always fail": alwaysFail,
-        "fake file": failOnNonExistantFile,
-        "real file": passOnExistantFile,
-        "custom assertion": customAssert,
-        "custom logic": customLogic
+        { name: "always pass",      func: alwaysPass            },
+        { name: "always fail",      func: alwaysFail            },
+        { name: "fake file",        func: failOnNonExistantFile },
+        { name: "real file",        func: passOnExistantFile    },
+        { name: "custom assertion", func: customAssert          },
+        { name: "custom logic",     func: customLogic           }
     })
     _, results := U.run(false)
     fprintf(std::stderr(), "\n")
@@ -74,8 +74,7 @@ fn testToast(T: ^toast::Context) {
         if state != expected[n] {
             s := sprintf(
                 "expected '%s' to %s, but it %s",
-                n,
-                expected[n] ? "pass" : "fail",
+                n, expected[n] ? "pass" : "fail",
                 state ? "passed": "failed"
             )
             T.fail(s)
