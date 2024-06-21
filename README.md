@@ -18,8 +18,8 @@ register one or more tests to it and then run it:
 fn main() {
     T := toast::newContext()
     T.registerTests({
-        "test 1": test1,
-        "test 2": test2,
+        { name: "test 1", func: test1 },
+        { name: "test 2", func: test2 }
     })
     T.registerTest("test 3", test3)
     T.run()
