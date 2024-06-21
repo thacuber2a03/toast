@@ -46,7 +46,7 @@ Context* = struct {
     // Whether to use the compact or the verbose output.
     compactOutput: bool
 
-    // The amount of custom assertions passed through so far.
+    // The amount of custom assertions called so far.
     customAsserts: uint
 }
 //~~
@@ -119,7 +119,7 @@ fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
     if t.result.code == 0 && !cond {
         t.funcDepth++
         s := "assertion failed!"
-        if msg != "" { s += sprintf(" reason: '%s'", msg) }
+        if msg != "" { s += sprintf("\nreason: '%s'", msg) }
         c.fail(s)
         return false
     }
@@ -174,8 +174,8 @@ fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
 
     if t.result.code == 0 && e.code != 0 {
         t.funcDepth++
-        s := sprintf("error code is not std::StdErr.ok (%i)\n", e.code)
-        s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
+        s := sprintf("error code is not std::StdErr.ok (%i)", e.code)
+        s += sprintf("\nreason: '%s'", msg != "" ? msg : e.msg)
         c.fail(s, e.code)
         return false
     }
@@ -230,12 +230,16 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
 
         if t.result.code != 0 {
             didFail = true
+            if !c.compactOutput {
+                pos := t.result.trace[t.funcDepth]
+                eprint(sprintf("\nat file %s\nline %i", pos.file, pos.line))
+            }
         } else {
             if t.result.msg == "" { c.pass("passed") }
             passedTests++
         }
 
-        if !c.compactOutput { eprintln(sprintf(" in %fms)\n", t.time * 1000)) }
+        if !c.compactOutput { eprintln(sprintf("\ntook %fms\n", t.time * 1000)) }
     }
 
     if c.compactOutput {
@@ -255,7 +259,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
                 pos := t.result.trace[t.funcDepth]
 
                 eprintln(sprintf(
-                    "%s\nat file %s, line %i, took %fms\n",
+                    "%s\nat file %s\nline %i, took %fms\n",
                     c.red(msg), pos.file, pos.line, t.time * 1000
                 ))
             }
