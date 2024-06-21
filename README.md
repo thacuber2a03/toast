@@ -1,8 +1,9 @@
 # toast
+
 A small testing framework with no dependencies written in
 the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
-- Pretty simple; easy to read, understand and modify/extend
+- Pretty simple; less than 200 lines, easy to read and modify/extend
 - Carries timing information and keeps track of test results
 
 ## Usage
