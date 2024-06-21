@@ -151,23 +151,14 @@ fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
     return true
 }
 
-fn (c: ^Context) newTestInfo(name: str, func: TestFn): TestInfo {
-    e := sprintf("test '%s' already registered", name)
-    for _, t^ in c.tests { std::assert(name != t.name, e) }
-
-    t := TestInfo {}
-    t.name = name
-    t.func = func
-    return t
-}
-
 //~~fn (^Context) registerTest
 // Registers a single new test.
 // Will throw a fatal error if the name is already registered with this context.
-fn (c: ^Context) registerTest*(name: str, test: TestFn) {
+fn (c: ^Context) registerTest*(name: str, func: TestFn) {
 //~~
-    t := c.newTestInfo(name, test)
-    c.tests = append(c.tests, t)
+    e := sprintf("test '%s' already registered", name)
+    for _, t^ in c.tests { std::assert(name != t.name, e) }
+    c.tests = append(c.tests, TestInfo{ name: name, func: func })
 }
 
 //~~fn (^Context) registerTests
@@ -177,6 +168,11 @@ fn (c: ^Context) registerTests*(tests: []TestInfo) {
 //~~
     for _, t in tests {
         t.result.msg = "" // in case it was set
+
+        n := t.name
+        e := sprintf("test '%s' already registered", n)
+        for _, u^ in c.tests { std::assert(n != u.name, e) }
+
         c.tests = append(c.tests, t)
     }
 }
@@ -202,11 +198,11 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
         if t.result.code != 0 {
             didFail = true
         } else {
-            if t.result.msg == "" { c.pass("ok") }
+            if t.result.msg == "" { c.pass("passed") }
             passedTests++
         }
 
-        if !c.compactOutput { eprintln(sprintf(" (took %fs)\n", t.time)) }
+        if !c.compactOutput { eprintln(sprintf(" in %fms)\n", t.time * 1000)) }
     }
 
     if c.compactOutput {
@@ -223,7 +219,12 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
                     t.name, t.result.msg
                 )
 
-                eprintln(sprintf("%s (took %fs)\n", c.red(msg), t.time))
+                pos := t.result.trace[0]
+
+                eprintln(sprintf(
+                    "%s\nat file %s, line %i, took %fms\n",
+                    c.red(msg), pos.file, pos.line, t.time * 1000
+                ))
             }
         }
     }
