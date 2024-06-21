@@ -1,4 +1,4 @@
-# tests.um
+# toast
 A small testing framework with no dependencies written in
 the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
@@ -14,7 +14,7 @@ register one or more tests to it and then run it:
 
 ```go
 fn main() {
-    t := tests::newContext()
+    t := toast::newContext()
     t.registerTests({
         "test 1": test1,
         "test 2": test2,
@@ -35,7 +35,7 @@ A sample test function goes like this:
 ```go
 import "std.um"
 
-fn sampleTest(T: ^tests::Context): std::Err {
+fn sampleTest(T: ^toast::Context): std::Err {
     var e: std::Err
 
     recipes := getRecipes()
