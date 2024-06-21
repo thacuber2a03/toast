@@ -10,7 +10,7 @@ type (
 
 //~~type TestFn
 // The signature of a test function.
-TestFn* = fn (ctx: ^Context): std::Err
+TestFn* = fn (ctx: ^Context)
 //~~
 
 TestTuple = struct {
@@ -24,12 +24,12 @@ Assert = struct { ctx: weak ^Context }
 //~~type Context
 // The definition of a testing context.
 Context* = struct {
-//~~
 	tests: map[str]TestTuple
-	current_: weak ^TestTuple
+	current: weak ^TestTuple
 	assert: Assert
 	fmtWithColor: bool
 }
+//~~
 
 //~~type Result
 // The results of a test.
@@ -55,81 +55,72 @@ fn newContext*(color: bool = false): ^Context {
 //~~
 	c := new(Context)
 	c.assert = Assert { ctx: c }
-	c.fmtWithColor = col
+	c.fmtWithColor = color
 	return c
 }
 
 //~~fn (^Context) fail
-// Returns an std::Err marking a test as failed. You should immediately return this back to the caller.
-fn (c: ^Context) fail*(msg: str, code: int = -1): std::Err {
+// Marks this test as failed. You should immediately return once calling this.
+fn (c: ^Context) fail*(msg: str, code: int = -1) {
 //~~
-	return std::error(code, msg)
+	t := c.current
+	eprint(c.red(sprintf("test '%s': %s", t.name, msg)))
+	t.res = std::error(code, msg)
 }
 
 //~~fn (^Context) pass
-// Returns an std::Err marking a test as passing. You should immediately return this back to the caller.
-fn (c: ^Context) pass*(msg: str = ""): std::Err {
+// Marks this test as passing. You should immediately return once calling this.
+fn (c: ^Context) pass*(msg: str = "") {
 //~~
-	return std::error(0, msg)
-}
-
-//~~fn (^Context) end
-// Returns an `std::Err` marking the end of a test.
-// This should be the last call to the test suite inside a test function, and should be immediately returned to the caller.
-fn (c: ^Context) end*(): std::Err {
-//~~
-	return c.pass("test ended")
+	t := c.current
+	eprint(c.green(sprintf("test '%s': ok", t.name)))
+	t.res = std::error(0, msg)
 }
 
 //~~ fn (^Context) assert.isTrue
-// Asserts that `cond` is true. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
+// Asserts that `cond` is true. If the resulting `bool` is false, the caller should return immediately.
 // If `msg` is not `""`, prints an extra reason alongside the error.
-fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): std::Err {
+fn (a: ^Assert) isTrue*(cond: bool, msg: str = ""): bool {
 //~~
 	c := a.ctx
-	t := c.current_
+	t := c.current
 	std::assert(t != null, "attempt to call an assertion outside of a test case")
 
 	if t.res.code == 0 && !cond {
-		s := c.red(sprintf("test '%s': assertion failed", t.name))
+		s := "assertion failed"
 		if msg != "" { s += sprintf("\nreason: '%s'", msg) }
-		eprint(s)
-
-		t.res = c.fail(s)
+		c.fail(s)
+		return false
 	}
-
-	return t.res
+	
+	return true
 }
 
 //~~ fn (^Context) assert.isTrue
 // Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
 // (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
-fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): std::Err {
+fn (a: ^Assert) isFalse*(cond: bool, msg: str = ""): bool {
 //~~
 	return a.isTrue(!cond, msg)
 }
 
 //~~ fn (c: ^Context) assert.isOk
-// Asserts that `e`'s code is 0. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
+// Asserts that `e`'s code is 0. If the resulting `bool` is false, the caller should return immediately.
 // If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
-fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): std::Err {
+fn (a: ^Assert) isOk*(e: std::Err, msg: str = ""): bool {
 //~~
 	c := a.ctx
-	t := c.current_
+	t := c.current
 	std::assert(t != null, "attempt to call an assertion outside of a test case")
 
 	if t.res.code == 0 && e.code != 0 {
-		s := c.red(sprintf(
-			"test '%s': error code is not std::StdErr.ok (%i)\n",
-			t.name, e.code
-		))
-		
+		s := sprintf("error code is not std::StdErr.ok (%i)\n", e.code)
 		s += sprintf("reason: '%s'", msg != "" ? msg : e.msg)
-
-		eprint(s); t.res = c.fail(s, e.code)
+		c.fail(s, e.code)
+		return false
 	}
 
-	return t.res
+	return true
 }
 
 fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
@@ -139,7 +130,6 @@ fn (c: ^Context) newTestTuple(name: str, test: TestFn): TestTuple {
 	t := TestTuple {}
 	t.name = name
 	t.test = test
-	t.res = c.pass("test passed")
 	return t
 }
 
@@ -173,7 +163,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 	passedTests := 0
 
 	for n, t^ in c.tests {
-		c.current_ = t
+		c.current = t
 
 		time := std::clock()
 		t.test(c)
@@ -182,10 +172,11 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 		if t.res.code != 0 {
 			didFail = true
 		} else {
+			if t.res.msg == "" { c.pass("ok") }
 			passedTests++
-			eprint(c.green(sprintf("test '%s': ok", t.name)))
 		}
-		eprintln(sprintf(" (%fs)\n", time))
+
+		eprintln(sprintf(" (took %fs)\n", time))
 
 		results[n] = Result { result: t.res, time: time }
 	}
@@ -194,7 +185,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): (bool, map[str]Result) {
 	text := sprintf("%i of %i tests passed", passedTests, l)
 	if passedTests == l { text = c.bold(c.green(text)) }
 	eprintln(text)
-	c.current_ = null
+	c.current = null
 
 	if quitIfErr && didFail { exit(-1) }
 	return didFail, results

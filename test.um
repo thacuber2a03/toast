@@ -3,25 +3,27 @@
 
 import ( "std.um"; "toast.um" )
 
-fn alwaysPass(T: ^toast::Context): std::Err {
-	e := T.assert.isTrue(1 + 2 == 3, "math doesn't work")
-	if e.code != 0 { return e }
-	return T.end()
+fn alwaysPass(T: ^toast::Context) {
+	if !T.assert.isTrue(1 + 2 == 3, "math doesn't work") { return }
 }
 
-fn alwaysFail(T: ^toast::Context): std::Err {
-	e := T.assert.isTrue(false, "logic works")
-	if e.code != 0 { return e }
-	return T.end()
+fn alwaysFail(T: ^toast::Context) {
+	if !T.assert.isTrue(false, "logic works") { return }
 }
 
-fn failOnNonExistantFile(T: ^toast::Context): std::Err {
+fn failOnNonExistantFile(T: ^toast::Context) {
 	f, e := std::fopen("AJHSKJHDSKhdksjhdsjhsd.txt", "rb")
 
-	e = T.assert.isOk(e, "couldn't open non-existant file (as it's supposed to do)")
-	if e.code != 0 { return e }
+	msg := "couldn't open non-existant file (as it's supposed to do)"
+	if !T.assert.isOk(e, msg) { return }
+}
 
-	return T.end()
+fn passOnExistantFile(T: ^toast::Context) {
+	f, e := std::fopen("toast.um", "rb")
+
+	if !T.assert.isOk(e, "this should NOT HAPPEN") { return }
+
+	std::fclose(f)
 }
 
 fn main() {
@@ -30,7 +32,8 @@ fn main() {
 	T.registerTests({
 		"always pass": alwaysPass,
 		"always fail": alwaysFail,
-		"fake file": failOnNonExistantFile
+		"fake file": failOnNonExistantFile,
+		"real file": passOnExistantFile
 	})
 	T.run()
 }

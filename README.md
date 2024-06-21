@@ -35,22 +35,22 @@ A sample test function goes like this:
 ```go
 import "std.um"
 
-fn sampleTest(T: ^toast::Context): std::Err {
-    var e: std::Err
-
+fn sampleTest(T: ^toast::Context) {
     recipes := getRecipes()
 
-    e = T.assert.isTrue(
+    res := T.assert.isTrue(
         validkey(recipes, "specialDish"),
         "the path to the special dish isn't listed"
     )
-    if e.code != 0 { return e }
+
+    if !res { return }
 
     f, e := std::fopen(recipes["specialDish"], "rb")
-    e = T.assert.isOk(e)
-    if e.code != 0 { return e }
+    if !T.assert.isOk(e) { return }
+    
+    // ... do stuff with file ...
 
-    return T.end()
+    std::fclose(f)
 }
 ```
 
@@ -114,32 +114,27 @@ Runs each of the tests registered to this context, and returns:
 > All of these are aliased to a specific `Context` (`(c: ^Context)`).
 > They will all throw a fatal error if called outside of a test function.
 
-#### `fail(msg: str, code: int = -1): std::Err`
+#### `fail(msg: str, code: int = -1)`
 
-Returns an `std::Err` marking a test as failed. You should immediately return this back to the caller.
+Marks this test as failed. You should immediately return once calling this.
 
-#### `pass(msg: str): std::Err`
+#### `pass(msg: str)`
 
-Returns an `std::Err` marking a test as passing. You should immediately return this back to the caller.
+Marks this test as passing. You should immediately return once calling this.
 
-#### `end(): std::Err`
+#### `assert.isTrue(cond: bool, msg: str = ""): bool`
 
-Returns an `std::Err` marking the end of a test.
-This should be the last call to the test suite inside a test function, and should be immediately returned to the caller.
-
-#### `assert.isTrue(cond: bool, msg: str = ""): std::Err`
-
-Asserts that `cond` is true. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
+Asserts that `cond` is true. If the resulting `bool` is false, the caller should return immediately.
 If `msg` is not `""`, prints an extra reason alongside the error.
 
-#### `assert.isFalse(cond: bool, msg: str = ""): std::Err`
+#### `assert.isFalse(cond: bool, msg: str = ""): bool`
 
 Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
 (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
 
 #### `assert.isOk(e: std::Err, msg: str = ""): std::Err`
 
-Asserts that `e`'s code is 0. If the resulting `std::Err`'s code is *not* 0, it should be immediately returned to the caller.
+Asserts that `e`'s code is 0. If the resulting `bool` is false, the caller should return immediately.
 If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
 
 ## Licensing
