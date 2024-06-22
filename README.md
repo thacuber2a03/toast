@@ -7,6 +7,21 @@ the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 - Carries timing information and keeps track of test results
 - Can print testing information in a slick and straightforward format, or a verbose but insightful one
 
+## Installation
+
+### Manually
+
+Download the "toast.um" file and place it somewhere in your project.
+Then, import it in your test file.
+
+### Through [UmBox](https://umbox.tophat2d.dev)
+
+> [!WARNING]
+> This will install the `master` branch version of the box, which might not be stable.
+
+Run `umbox install toast`.
+You can also run `umbox init toast` to make a new box with Umka and toast preinstalled.
+
 ## Usage
 
 ### Creating a new test suite
