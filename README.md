@@ -82,8 +82,7 @@ As of now, the result must be checked for a `false` value and the test returned 
 You can also make custom assertion functions by, either mixing and matching assertions,
 or encoding your own logic with the help of the `fail` and `pass` functions.
 
-For example, here's how `assert.sameType` function would be written
-if it was a custom assertion function:
+For example, here's how `assert.sameType` would be written if it was a custom assertion function:
 
 ```go
 fn assertSameType(T: ^toast::Context, a, b: any): bool {
