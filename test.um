@@ -11,14 +11,14 @@ fn alwaysFail(T: ^toast::Context) {
     if !T.assert.isTrue(false, "logic works") { return }
 }
 
-fn failOnNonExistantFile(T: ^toast::Context) {
+fn failOnNonExistentFile(T: ^toast::Context) {
     f, e := std::fopen("AJHSKJHDSKhdksjhdsjhsd.txt", "rb")
 
-    msg := "couldn't open non-existant file (as it's supposed to do)"
+    msg := "couldn't open non-existent file (as it's supposed to do)"
     if !T.assert.isOk(e, msg) { return }
 }
 
-fn passOnExistantFile(T: ^toast::Context) {
+fn passOnExistentFile(T: ^toast::Context) {
     f, e := std::fopen("toast.um", "rb")
 
     if !T.assert.isOk(e, "this should NOT HAPPEN") { return }
@@ -65,8 +65,8 @@ fn testToast(T: ^toast::Context) {
     U.registerTests({
         { name: "always pass",      func: alwaysPass            },
         { name: "always fail",      func: alwaysFail            },
-        { name: "fake file",        func: failOnNonExistantFile },
-        { name: "real file",        func: passOnExistantFile    },
+        { name: "fake file",        func: failOnNonExistentFile },
+        { name: "real file",        func: passOnExistentFile    },
         { name: "custom assertion", func: customAssert          },
         { name: "custom logic",     func: customLogic           }
     })
