@@ -3,7 +3,7 @@ import "std.um"
 //~~const VERSION
 // The current version number of the library, formatted as specified by
 // the [Semantic Versioning Specification](https://semver.org/).
-const VERSION* = "0.3.0"
+const VERSION* = "0.4.0"
 //~~
 
 type (
