@@ -5,7 +5,8 @@ the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
 - Pretty simple; less than 300 sloc, easy to read and modify/extend
 - Carries timing information and keeps track of test results
-- Can print testing information in a slick and straightforward format, or a verbose but insightful one
+<!-- might erase this line -->
+- Can print testing information in a slick and straightforward format, or a verbose but in-depth one
 
 ## Installation
 
@@ -20,7 +21,7 @@ Then, import it in your test file.
 > This will install the `master` branch version of the box, which might not be stable.
 
 Run `umbox install toast`.
-You can also run `umbox init toast` to make a new box with Umka and toast preinstalled.
+You can also run `umbox init -p toast` to make a new box with Umka and toast preinstalled.
 
 ## Usage
 
@@ -81,16 +82,15 @@ As of now, the result must be checked for a `false` value and the test returned 
 You can also make custom assertion functions by, either mixing and matching assertions,
 or encoding your own logic with the help of the `fail` and `pass` functions.
 
-For example, here's how an `assertEqualTypes` function could be written
-using custom logic for some specific interface `T`:
+For example, here's how `assert.sameType` function would be written
+if it was a custom assertion function:
 
 ```go
-fn assertEqualTypes(T: ^toast::Context, a, b: T): bool {
+fn assertSameType(T: ^toast::Context, a, b: any): bool {
     T.startCustom()
 
     if !selftypeeq(a, b) {
-        T.fail("expected a and b to have the same type")
-        return T.endCustom(false)
+        return T.endCustom(T.fail("expected a and b to have the same type"))
     }
 
     return T.endCustom(true)
@@ -103,9 +103,9 @@ It can then be used as any other test function:
 // ...
 
 // this will pass
-if !assertEqualTypes(T, 1, 2) { return }
+if !assertSameType(T, 1, 2) { return }
 // this will fail
-if !assertEqualTypes(T, 1, "aeiou") { return }
+if !assertSameType(T, 1, "aeiou") { return }
 
 // ...
 ```

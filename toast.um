@@ -16,13 +16,15 @@ TestFn* = fn (ctx: ^Context)
 //~~type TestInfo
 // Information about a test.
 TestInfo* = struct {
-    name: str
-    func: TestFn
-    result: std::Err
-    time: real
+    name: str        // Name of the test.
+    func: TestFn     // The function attached to this test.
+    result: std::Err // The final result of this test.
+    time: real       // The time it took for this test to pass *or* to fail.
+    // other unexported fields
+//~~
+
     funcDepth: uint
 }
-//~~
 
 Assertions = struct { ctx: weak ^Context }
 
@@ -46,10 +48,11 @@ Context* = struct {
     // Whether to use the compact or the verbose output.
     compactOutput: bool
 
-    // The amount of custom assertions called so far.
-    customAsserts: uint
-}
+    // other unexported fields...
 //~~
+
+    customAsserts: []std::Err
+}
 
 )
 
@@ -77,24 +80,9 @@ fn newContext*(): ^Context {
     return c
 }
 
-//~~fn (^Context) fail
-// Marks this test as failed. You should immediately return once calling this.
-fn (c: ^Context) fail*(msg: str, code: int = -1) {
-//~~
-    t := c.current
-    std::assert(t != null, "attempt to call fail() outside of a test case")
-
-    s := c.bold("X")
-    if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
-    eprint(c.red(s))
-
-    t.funcDepth++
-    t.result = std::error(code, msg)
-}
-
 //~~fn (^Context) pass
 // Marks this test as passing. You should immediately return once calling this.
-fn (c: ^Context) pass*(msg: str = "") {
+fn (c: ^Context) pass*(msg: str = ""): bool {
 //~~
     t := c.current
     std::assert(t != null, "attempt to call pass() outside of a test case")
@@ -105,23 +93,87 @@ fn (c: ^Context) pass*(msg: str = "") {
 
     t.funcDepth++
     t.result = std::error(0, msg)
+    return true
+}
+
+//~~fn (^Context) fail
+// Marks this test as failed. You should immediately return once calling this.
+fn (c: ^Context) fail*(msg: str, code: int = -1): bool {
+//~~
+    t := c.current
+    std::assert(t != null, "attempt to call fail() outside of a test case")
+
+    s := c.bold("X")
+    if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
+    eprint(c.red(s))
+
+    t.funcDepth++
+    t.result = std::error(code, msg)
+    return false
+}
+
+fn (c: ^Context) checkInvariants() {
+    t := c.current
+    std::assert(t != null, "attempt to call an assertion outside of a test case")
+    std::assert(t.result.code == 0, "a previous assertion failed, but its enclosing function did not return")
+}
+
+//~~fn (^Context) startCustom
+// Marks the start of a custom assertion.
+// This must be called at the beginning of all custom assertions.
+fn (c: ^Context) startCustom*() {
+//~~
+    c.checkInvariants()
+    t := c.current
+    c.customAsserts = append(c.customAsserts, std::error(-1))
+    t.funcDepth += 2 // one more for this very function
+}
+
+//~~fn (^Context) endCustom
+// Marks the end of the custom assertion.
+// The intended return boolean must be passed through this function
+// and that value must be returned instead:
+// `return T.endCustom(returnVal)`.
+fn (c: ^Context) endCustom*(res: bool): bool {
+//~~
+    std::assert(
+        c.current != null && len(c.customAsserts) != 0,
+        "attempt to call endCustom outside a custom assertion"
+    )
+
+    c.customAsserts = delete(c.customAsserts, len(c.customAsserts)-1)
+    c.current.funcDepth--
+    // returning from this function decrements once more
+    return res
+}
+
+fn (a: ^Assertions) startAssertion(): (weak ^Context, weak ^TestInfo) {
+    c := a.ctx
+    c.checkInvariants()
+    return c, c.current
+}
+
+fn (a: ^Assertions) failAssertion(err: str): bool {
+    c := a.ctx
+    t := c.current
+
+    t.funcDepth += 2
+    c.fail(err)
+    return false
 }
 
 //~~ fn (^Context) assert.isTrue
-// Asserts that `cond` is true. If the resulting `bool` is false, the caller should return immediately.
+// Asserts that `cond` is true.
+// If the resulting `bool` is false, the caller should return immediately.
 // If `msg` is not `""`, prints an extra reason alongside the error.
 fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
 //~~
-    c := a.ctx
-    t := c.current
-    std::assert(t != null, "attempt to call an assertion outside of a test case")
+    a.startAssertion()
 
-    if t.result.code == 0 && !cond {
-        t.funcDepth++
+    if !cond {
         s := "assertion failed!"
         if msg != "" { s += sprintf("\nreason: '%s'", msg) }
-        c.fail(s)
-        return false
+        return a.failAssertion(s)
     }
 
     return true
@@ -132,52 +184,43 @@ fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
 // (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
 fn (a: ^Assertions) isFalse*(cond: bool, msg: str = ""): bool {
 //~~
+    a.ctx.current.funcDepth++
     return a.isTrue(!cond, msg)
 }
 
-//~~fn (^Context) startCustom
-// Marks the start of a custom assertion.
-// This must be called at the beginning of all custom assertions.
-fn (c: ^Context) startCustom*() {
-//~~
-    std::assert(c.current != null, "attempt to call startCustom outside of a test suite")
-    c.customAsserts++
-    c.current.funcDepth += 2 // one more for this very function
-}
-
-//~~fn (^Context) endCustom
-// Marks the end of the custom assertion.
-// The intended return boolean must be passed through this
-// function and that must be returned instead:
-// `return T.endCustom(returnVal)`.
-fn (c: ^Context) endCustom*(res: bool): bool {
-//~~
-    std::assert(
-        c.current != null && c.customAsserts != 0,
-        "attempt to call endCustom outside a custom assertion"
-    )
-
-    c.customAsserts--
-    c.current.funcDepth--
-    // returning from this function decrements once more
-    return res
-}
-
 //~~fn (^Context) assert.isOk
-// Asserts that `e`'s code is 0. If the resulting `bool` is false, the caller should return immediately.
-// If `msg` is not `""`, prints an extra reason alongside the error. If it is, it defaults to `e`'s error message.
+// Asserts that `e`'s code is 0.
+// If the resulting `bool` is false, the caller should return immediately.
+//
+// If `msg` is not `""`, prints an extra reason alongside the error.
+// If it is, it defaults to `e`'s error message.
 fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
 //~~
-    c := a.ctx
-    t := c.current
-    std::assert(t != null, "attempt to call an assertion outside of a test case")
+    a.startAssertion()
 
-    if t.result.code == 0 && e.code != 0 {
-        t.funcDepth++
+    if e.code != 0 {
         s := sprintf("error code is not std::StdErr.ok (%i)", e.code)
-        s += sprintf("\nreason: '%s'", msg != "" ? msg : e.msg)
-        c.fail(s, e.code)
-        return false
+        m := msg
+        if m == "" { m = e.msg }
+        if m != "" { s += sprintf("\nreason: '%s'", m) }
+        return a.failAssertion(s)
+    }
+
+    return true
+}
+
+//~~ fn (^Context) assert.sameType
+// Asserts that `a` and `b` have the same type.
+// If the resulting `bool` is false, the caller should return immediately.
+// If `msg` is not `""`, prints an extra reason alongside the error.
+fn (a: ^Assertions) sameType(va, vb: any, msg: str = ""): bool {
+//~~
+    a.startAssertion()
+
+    if !selftypeeq(va, vb) {
+        s := sprintf("expected %v and %v to be compatible", va, vb)
+        if msg != "" { s += sprintf("\nreason: '%s'", msg)}
+        return a.failAssertion(s)
     }
 
     return true
@@ -211,9 +254,11 @@ fn (c: ^Context) registerTests*(tests: []TestInfo) {
 }
 
 //~~fn (^Context) run
-// Runs each of the tests registered to this context, and returns whether any single one of them had an error.
+// Runs each of the tests registered to this context,
+// and returns whether any single one of them had an error.
 //
-// `quitIfErr` exits the application after every test is run, if any single one of them has any errors.
+// `quitIfErr` exits the application after every test is run,
+// if any single one of them threw an error.
 fn (c: ^Context) run*(quitIfErr: bool = true): bool {
 //~~
     didFail := false
@@ -228,11 +273,17 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
         t.func(c)
         t.time = std::clock() - time
 
+        if len(c.customAsserts) != 0 {
+            loc := c.customAsserts[len(c.customAsserts)-1].trace[1]
+            eprintln(c.red("\n\n[FATAL] you missed a call to T.endCustom"))
+            eprint(sprintf("in function %s, line %i\nin file %s", loc.func, loc.line, loc.file))
+        }
+
         if t.result.code != 0 {
             didFail = true
             if !c.compactOutput {
                 pos := t.result.trace[t.funcDepth]
-                eprint(sprintf("\nat file %s\nline %i", pos.file, pos.line))
+                eprint(sprintf("\nin file %s\nline %i", pos.file, pos.line))
             }
         } else {
             if t.result.msg == "" { c.pass("passed") }
@@ -259,7 +310,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
                 pos := t.result.trace[t.funcDepth]
 
                 eprintln(sprintf(
-                    "%s\nat file %s\nline %i, took %fms\n",
+                    "%s\nin file %s\nline %i, took %fms\n",
                     c.red(msg), pos.file, pos.line, t.time * 1000
                 ))
             }

@@ -28,26 +28,28 @@ fn passOnExistentFile(T: ^toast::Context) {
 
 fn assertEqual(T: ^toast::Context, a, b: int): bool {
     T.startCustom()
-    return T.endCustom(T.assert.isTrue(a == b, "expected a and b to be equal"))
+    return T.endCustom(T.assert.isTrue(
+        a == b, "expected a and b to be equal"
+    ))
 }
 
 fn customAssert(T: ^toast::Context) {
     if !assertEqual(T, 1, 1) { return }
 }
 
-fn assertTypeEqual(T: ^toast::Context, a, b: any): bool {
+fn assertSquare(T: ^toast::Context, n, s: int): bool {
     T.startCustom()
 
-    if !selftypeeq(a, b) {
-        T.fail("expected a and b to have the same type")
-        return T.endCustom(false)
+    if n * n != s {
+        return T.endCustom(T.fail(sprintf("%v squared does not equal %v", n, s)))
     }
 
     return T.endCustom(true)
 }
 
 fn customLogic(T: ^toast::Context) {
-    if !assertTypeEqual(T, 1, 2) { return }
+    if !assertSquare(T, 3, 9 ) { return }
+    if !assertSquare(T, 3, 10) { return }
 }
 
 fn testToast(T: ^toast::Context) {
@@ -57,7 +59,7 @@ fn testToast(T: ^toast::Context) {
         "fake file": false,
         "real file": true,
         "custom assertion": true,
-        "custom logic": true
+        "custom logic": false
     }
 
     U := toast::newContext()
