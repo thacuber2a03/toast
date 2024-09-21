@@ -5,8 +5,8 @@ the [Umka](https://github.com/vtereshkov/umka-lang) programming language.
 
 - Pretty simple; less than 300 sloc, easy to read and modify/extend
 - Carries timing information and keeps track of test results
-<!-- might erase this line -->
 - Can print testing information in a slick and straightforward format, or a verbose but in-depth one
+<!-- might erase this line -->
 
 ## Installation
 
