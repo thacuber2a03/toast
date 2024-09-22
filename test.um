@@ -52,6 +52,11 @@ fn customLogic(T: ^toast::Context) {
     if !assertSquare(T, 3, 10) { return }
 }
 
+fn assertTypes(T: ^toast::Context) {
+    if !T.assert.sameType(42, 90)           { return }
+    if !T.assert.sameType("hello", "world") { return }
+}
+
 fn testToast(T: ^toast::Context) {
     expected := map[str]bool{
         "always pass": true,
@@ -59,7 +64,8 @@ fn testToast(T: ^toast::Context) {
         "fake file": false,
         "real file": true,
         "custom assertion": true,
-        "custom logic": false
+        "custom logic": false,
+        "assert types": true
     }
 
     U := toast::newContext()
@@ -70,7 +76,8 @@ fn testToast(T: ^toast::Context) {
         { name: "fake file",        func: failOnNonExistentFile },
         { name: "real file",        func: passOnExistentFile    },
         { name: "custom assertion", func: customAssert          },
-        { name: "custom logic",     func: customLogic           }
+        { name: "custom logic",     func: customLogic           },
+        { name: "assert types",     func: assertTypes           }
     })
     U.run(false)
     fprintf(std::stderr(), "\n")

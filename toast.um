@@ -3,7 +3,7 @@ import "std.um"
 //~~const VERSION
 // The current version number of the library, formatted as specified by
 // the [Semantic Versioning Specification](https://semver.org/).
-const VERSION* = "0.4.0"
+const VERSION* = "0.4.1"
 //~~
 
 type (
@@ -126,7 +126,7 @@ fn (c: ^Context) startCustom*() {
     c.checkInvariants()
     t := c.current
     c.customAsserts = append(c.customAsserts, std::error(-1))
-    t.funcDepth += 2 // one more for this very function
+    t.funcDepth++
 }
 
 //~~fn (^Context) endCustom
@@ -213,12 +213,12 @@ fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
 // Asserts that `a` and `b` have the same type.
 // If the resulting `bool` is false, the caller should return immediately.
 // If `msg` is not `""`, prints an extra reason alongside the error.
-fn (a: ^Assertions) sameType(va, vb: any, msg: str = ""): bool {
+fn (a: ^Assertions) sameType*(va, vb: any, msg: str = ""): bool {
 //~~
     a.startAssertion()
 
     if !selftypeeq(va, vb) {
-        s := sprintf("expected %v and %v to be compatible", va, vb)
+        s := sprintf("expected %v and %v to have the same type", va, vb)
         if msg != "" { s += sprintf("\nreason: '%s'", msg)}
         return a.failAssertion(s)
     }
