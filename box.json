@@ -1,6 +1,6 @@
 {
 	"name": "toast",
-	"version": "v0.4.0",
+	"version": "v0.4.1",
 	"author": "@thacuber2a03",
 	"license": "BSD 2-Clause",
 	"description": "A small, no-dependency testing framework for Umka.",
