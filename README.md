@@ -109,7 +109,7 @@ if !assertSameType(T, 1, "aeiou") { return }
 // ...
 ```
 
-Here's also a pretty pointless equal values assertion implemented
+Here's also a (rather pointless) equal values assertion implemented
 with the `assert.isTrue` call (for any two comparable types `T` and `U`):
 
 ```go
@@ -123,4 +123,4 @@ fn assertEqual(T: ^toast::Context, a: T, b: U): bool {
 
 ## Licensing
 
-This library is licensed under the [BSD 2-Clause](./LICENSE) license. See LICENSE for details.
+This library is released under the [BSD 2-Clause](./LICENSE) license.
