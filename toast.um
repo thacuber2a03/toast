@@ -145,8 +145,10 @@ fn (c: ^Context) endCustom*(res: bool): bool {
     )
 
     c.customAsserts = delete(c.customAsserts, len(c.customAsserts)-1)
+    t := c.current
+    t.funcDepth--
     if c.calledResultFn {
-	    c.current.funcDepth--
+	    t.funcDepth--
 	    c.calledResultFn = false
     }
     // returning from this function decrements once more
