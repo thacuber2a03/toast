@@ -130,6 +130,7 @@ fn (c: ^Context) startCustom*() {
     c.checkInvariants()
     c.customAsserts = append(c.customAsserts, std::error(-1))
     c.current.funcDepth++
+    c.calledResultFn = false
 }
 
 //~~fn (^Context) endCustom
@@ -147,7 +148,7 @@ fn (c: ^Context) endCustom*(res: bool): bool {
     c.customAsserts = delete(c.customAsserts, len(c.customAsserts)-1)
     t := c.current
     t.funcDepth--
-    if !res && c.calledResultFn {
+    if c.calledResultFn {
 	    t.funcDepth--
 	    c.calledResultFn = false
     }
@@ -291,7 +292,7 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
 
         if t.result.code != 0 {
 	        for i := 0; i < t.funcDepth; i++ {
-		        t.result.trace = delete(t.result.trace, len(t.result.trace)-1)
+		        t.result.trace = delete(t.result.trace, 0)
 	        }
             didFail = true
             if !c.compactOutput {
