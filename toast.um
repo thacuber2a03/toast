@@ -51,6 +51,8 @@ Context* = struct {
     // other unexported fields...
 //~~
 
+	calledResultFn: bool
+
     customAsserts: []std::Err
 }
 
@@ -93,6 +95,7 @@ fn (c: ^Context) pass*(msg: str = ""): bool {
 
     t.funcDepth++
     t.result = std::error(0, msg)
+    c.calledResultFn = false
     return true
 }
 
@@ -109,6 +112,7 @@ fn (c: ^Context) fail*(msg: str, code: int = -1): bool {
 
     t.funcDepth++
     t.result = std::error(code, msg)
+    c.calledResultFn = true
     return false
 }
 
@@ -124,9 +128,8 @@ fn (c: ^Context) checkInvariants() {
 fn (c: ^Context) startCustom*() {
 //~~
     c.checkInvariants()
-    t := c.current
     c.customAsserts = append(c.customAsserts, std::error(-1))
-    t.funcDepth++
+    c.current.funcDepth++
 }
 
 //~~fn (^Context) endCustom
@@ -142,7 +145,10 @@ fn (c: ^Context) endCustom*(res: bool): bool {
     )
 
     c.customAsserts = delete(c.customAsserts, len(c.customAsserts)-1)
-    c.current.funcDepth--
+    if c.calledResultFn {
+	    c.current.funcDepth--
+	    c.calledResultFn = false
+    }
     // returning from this function decrements once more
     return res
 }
@@ -273,6 +279,8 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
         t.func(c)
         t.time = std::clock() - time
 
+        c.calledResultFn = false
+
         if len(c.customAsserts) != 0 {
             loc := c.customAsserts[len(c.customAsserts)-1].trace[1]
             eprintln(c.red("\n\n[FATAL] you missed a call to T.endCustom"))
@@ -280,9 +288,12 @@ fn (c: ^Context) run*(quitIfErr: bool = true): bool {
         }
 
         if t.result.code != 0 {
+	        for i := 0; i < t.funcDepth; i++ {
+		        t.result.trace = delete(t.result.trace, len(t.result.trace)-1)
+	        }
             didFail = true
             if !c.compactOutput {
-                pos := t.result.trace[t.funcDepth]
+                pos := t.result.trace[0]
                 eprint(sprintf("\nin file %s\nline %i", pos.file, pos.line))
             }
         } else {

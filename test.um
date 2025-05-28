@@ -35,6 +35,7 @@ fn assertEqual(T: ^toast::Context, a, b: int): bool {
 
 fn customAssert(T: ^toast::Context) {
     if !assertEqual(T, 1, 1) { return }
+    if !assertEqual(T, 1, 2) { T.pass(); return }
 }
 
 fn assertSquare(T: ^toast::Context, n, s: int): bool {
