@@ -147,7 +147,7 @@ fn (c: ^Context) endCustom*(res: bool): bool {
     c.customAsserts = delete(c.customAsserts, len(c.customAsserts)-1)
     t := c.current
     t.funcDepth--
-    if c.calledResultFn {
+    if !res && c.calledResultFn {
 	    t.funcDepth--
 	    c.calledResultFn = false
     }
