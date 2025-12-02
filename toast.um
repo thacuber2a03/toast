@@ -217,6 +217,24 @@ fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
     return true
 }
 
+//~~fn (^Context) assert.isErr
+// Asserts that `e`'s code is *not* 0.
+// If the resulting `bool` is false, the caller should return immediately.
+//
+// If `msg` is not `""`, prints an extra reason alongside the error.
+fn (a: ^Assertions) isErr*(e: std::Err, msg: str = ""): bool {
+//~~
+    a.startAssertion()
+
+    if e.code == 0 {
+        s := sprintf("error code is std::StdErr.ok (%i)", e.code)
+        if msg != "" { s += sprintf("\nreason: '%s'", msg) }
+        return a.failAssertion(s)
+    }
+
+    return true
+}
+
 //~~ fn (^Context) assert.sameType
 // Asserts that `a` and `b` have the same type.
 // If the resulting `bool` is false, the caller should return immediately.

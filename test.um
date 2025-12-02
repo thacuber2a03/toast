@@ -11,11 +11,20 @@ fn alwaysFail(T: ^toast::Context) {
     if !T.assert.isTrue(false, "logic works") { return }
 }
 
+const nonExistentFile = "AJHSKJHDSKhdksjhdsjhsd.txt"
+
 fn failOnNonExistentFile(T: ^toast::Context) {
-    f, e := std::fopen("AJHSKJHDSKhdksjhdsjhsd.txt", "rb")
+    f, e := std::fopen(nonExistentFile, "rb")
 
     msg := "couldn't open non-existent file (as it's supposed to do)"
     if !T.assert.isOk(e, msg) { return }
+}
+
+fn passOnNonExistentFile(T: ^toast::Context) {
+    f, e := std::fopen(nonExistentFile, "rb")
+
+    msg := "somehow opened assumed-non-existent file (why does it exist in your machine, and what does it contain)"
+    if !T.assert.isErr(e, msg) { return }
 }
 
 fn passOnExistentFile(T: ^toast::Context) {
