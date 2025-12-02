@@ -1,362 +1,245 @@
 import "std.um"
 
-//~~const VERSION
-// The current version number of the library, formatted as specified by
-// the [Semantic Versioning Specification](https://semver.org/).
-const VERSION* = "0.5.0"
-//~~
+const version* = "0.6.0"
 
 type (
+	TestFn* = fn(ctx: ^Context)
 
-//~~type TestFn
-// The signature of a test function.
-TestFn* = fn (ctx: ^Context)
-//~~
+	TestEntry* = struct { name: str; func: TestFn }
 
-//~~type TestInfo
-// Information about a test.
-TestInfo* = struct {
-    name: str        // Name of the test.
-    func: TestFn     // The function attached to this test.
-    result: std::Err // The final result of this test.
-    time: real       // The time it took for this test to pass *or* to fail.
-    // other unexported fields
-//~~
+	SingleTestResult* = struct {
+		name: str
+		locations: []std::ErrPos
+		errors: []std::Err
+		time: real
+	}
 
-    funcDepth: uint
-}
+	TestResults* = struct {
+		data: []SingleTestResult
+		totalRuntime: real
+	}
 
-Assertions = struct { ctx: weak ^Context }
+	ContextInternal = struct {
+		currentTestResult: ^SingleTestResult
+		currentTestFunction: TestFn
+	}
 
-//~~type Context
-// The definition of a testing context.
-Context* = struct {
-    // Holds all of the registered tests. You can query this array
-    // after calling `run()` to see the results and time taken for each test.
-    tests: []TestInfo
-
-    // A weak pointer to the currently processed test.
-    // It is only valid within the test functions.
-    current: weak ^TestInfo
-
-    // Holds the assertion functions.
-    assert: Assertions
-
-    // Toggles color printing.
-    printWithColor: bool
-
-    // Whether to use the compact or the verbose output.
-    compactOutput: bool
-
-    // other unexported fields...
-//~~
-
-	calledResultFn: bool
-
-    customAsserts: []std::Err
-}
-
+	Context* = struct { _: ContextInternal
+		queuedTests: []TestEntry
+		finished: bool
+	}
 )
 
-fn eprintln(text: str = "") { fprintf(std::stderr(), "%s\n", text) }
-fn eprint(text: str = "") { fprintf(std::stderr(), text) }
+/////////////////////////////////////////////////////////////////////////////////////
 
-fn (c: ^Context) green(text: str): str { return c.printWithColor ? sprintf("\x1b[32m%s\x1b[m", text) : text }
-fn (c: ^Context) red(text: str): str { return c.printWithColor ? sprintf("\x1b[31m%s\x1b[m", text) : text }
-fn (c: ^Context) bold(text: str): str { return c.printWithColor ? sprintf("\x1b[1m%s\x1b[m", text) : text }
-
-//~~fn newContext
-// Returns a new, default `Context`.
-//
-// Defaults:
-// - `compactOutput`: `true`
-// - `printWithColor`: `false`
-fn newContext*(): ^Context {
-//~~
-    c := new(Context)
-    c.assert = Assertions { ctx: c }
-
-    c.compactOutput = true
-    c.printWithColor = false
-
-    return c
+fn getStackFrame(i: int = 2): std::ErrPos {
+	return std::error(-1).trace[i] // help
 }
 
-//~~fn (^Context) pass
-// Marks this test as passing. You should immediately return once calling this.
-fn (c: ^Context) pass*(msg: str = ""): bool {
-//~~
-    t := c.current
-    std::assert(t != null, "attempt to call pass() outside of a test case")
+fn (c: ^Context) internalFail(msg: str, loc: std::ErrPos, error: str): bool {
+	tr := c._.currentTestResult
 
-    s := "O"
-    if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
-    eprint(c.green(s))
+	tr.errors = append(tr.errors, std::error(-1,
+		error + (msg != "" ? ": " + msg : ""),
+		c._.currentTestFunction
+	))
+	tr.locations = append(tr.locations, loc)
 
-    t.funcDepth++
-    t.result = std::error(0, msg)
-    c.calledResultFn = true
-    return true
+	return false
 }
 
-//~~fn (^Context) fail
-// Marks this test as failed. You should immediately return once calling this.
-fn (c: ^Context) fail*(msg: str, code: int = -1): bool {
-//~~
-    t := c.current
-    std::assert(t != null, "attempt to call fail() outside of a test case")
-
-    s := c.bold("X")
-    if !c.compactOutput { s = sprintf("test '%s': %s", t.name, msg) }
-    eprint(c.red(s))
-
-    t.funcDepth++
-    t.result = std::error(code, msg)
-    c.calledResultFn = true
-    return false
+fn (c: ^Context) fail*(msg: str = ""): bool {
+	return c.internalFail(msg, getStackFrame(), "failure")
 }
 
-fn (c: ^Context) checkInvariants() {
-    t := c.current
-    std::assert(t != null, "attempt to call an assertion outside of a test case")
-    std::assert(t.result.code == 0, "a previous assertion failed, but its enclosing function did not return")
+// the only function that can override the result in this way
+fn (c: ^Context) pass*(): bool {
+	tr := c._.currentTestResult
+	tr.errors = {}
+	tr.locations = {}
+	return true
 }
 
-//~~fn (^Context) startCustom
-// Marks the start of a custom assertion.
-// This must be called at the beginning of all custom assertions.
-fn (c: ^Context) startCustom*() {
-//~~
-    c.checkInvariants()
-    c.calledResultFn = false
-    c.customAsserts = append(c.customAsserts, std::error(-1))
-    c.current.funcDepth++
+fn (c: ^Context) assertBase(ok: bool, msg: str): bool {
+	if !ok { c.internalFail(msg, getStackFrame(3), "assertion failed") }
+	return ok
 }
 
-//~~fn (^Context) endCustom
-// Marks the end of the custom assertion.
-// The intended return boolean must be passed through this function
-// and that value must be returned instead:
-// `return T.endCustom(returnVal)`.
-fn (c: ^Context) endCustom*(res: bool): bool {
-//~~
-    std::assert(
-        c.current != null && len(c.customAsserts) != 0,
-        "attempt to call endCustom outside a custom assertion"
-    )
-
-    c.customAsserts = delete(c.customAsserts, len(c.customAsserts)-1)
-    t := c.current
-    if !res && c.calledResultFn {
-	    t.funcDepth--
-	    c.calledResultFn = false
-    }
-    // returning from this function decrements once more
-    return res
+fn (c: ^Context) assertTrue*(b: bool, msg: str = ""): bool {
+	return c.assertBase(b, msg)
 }
 
-fn (a: ^Assertions) startAssertion(): (weak ^Context, weak ^TestInfo) {
-    c := a.ctx
-    c.checkInvariants()
-    return c, c.current
+fn (c: ^Context) assertFalse*(b: bool, msg: str = ""): bool {
+	return c.assertBase(!b, msg)
 }
 
-fn (a: ^Assertions) failAssertion(err: str): bool {
-    c := a.ctx
-    t := c.current
-
-    t.funcDepth += 2
-    c.fail(err)
-    return false
+fn (c: ^Context) assertOk*(err: std::Err, msg: str = ""): bool {
+	if msg == "" {
+		msg = sprintf("error code is not std::StdErr.ok (%d)", err.code)
+	}
+	return c.assertBase(err.code == 0, msg)
 }
 
-//~~ fn (^Context) assert.isTrue
-// Asserts that `cond` is true.
-// If the resulting `bool` is false, the caller should return immediately.
-// If `msg` is not `""`, prints an extra reason alongside the error.
-fn (a: ^Assertions) isTrue*(cond: bool, msg: str = ""): bool {
-//~~
-    a.startAssertion()
-
-    if !cond {
-        s := "assertion failed!"
-        if msg != "" { s += sprintf("\nreason: '%s'", msg) }
-        return a.failAssertion(s)
-    }
-
-    return true
+fn (c: ^Context) assertErr*(err: std::Err, msg: str = ""): bool {
+	if msg == "" { msg = "error code is std::StdErr.ok" }
+	return c.assertBase(err.code != 0, msg)
 }
 
-//~~ fn (^Context) assert.isFalse
-// Asserts that `cond` is false. Everything else from `assert.isTrue` applies.
-// (Currently, this is literally just a call to `assert.isTrue` with the condition inverted.)
-fn (a: ^Assertions) isFalse*(cond: bool, msg: str = ""): bool {
-//~~
-    a.ctx.current.funcDepth++
-    return a.isTrue(!cond, msg)
+fn (c: ^Context) assertEqualTypes*(a, b: any, msg: str = ""): bool {
+	if msg == "" { msg = sprintf("%v and %v have different types", a, b) }
+	return c.assertBase(selftypeeq(a, b), msg)
 }
 
-//~~fn (^Context) assert.isOk
-// Asserts that `e`'s code is `std::StdErr.ok`.
-// If the resulting `bool` is false, the caller should return immediately.
-//
-// If `msg` is not `""`, prints an extra reason alongside the error.
-// If it is, it defaults to `e`'s error message.
-fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
-//~~
-    a.startAssertion()
+/////////////////////////////////////////////////////////////////////////////////////
 
-    if e.code != 0 {
-        s := sprintf("error code is not std::StdErr.ok (%i)", e.code)
-        m := msg
-        if m == "" { m = e.msg }
-        if m != "" { s += sprintf("\nreason: '%s'", m) }
-        return a.failAssertion(s)
-    }
+fn libraryInit()
 
-    return true
+fn (c: ^Context) registerTestEntry(entry: TestEntry) {
+	libraryInit()
+
+	e := sprintf("test already registered: '%s'", entry.name)
+
+	for _, t^ in c.queuedTests { std::assert(t.name != entry.name, e) }
+
+	c.queuedTests = append(c.queuedTests, entry)
 }
 
-//~~fn (^Context) assert.isErr
-// Asserts that `e`'s code is *not* `std::StdErr.ok`.
-// If the resulting `bool` is false, the caller should return immediately.
-//
-// If `msg` is not `""`, prints an extra reason alongside the error.
-fn (a: ^Assertions) isErr*(e: std::Err, msg: str = ""): bool {
-//~~
-    a.startAssertion()
-
-    if e.code == 0 {
-        s := sprintf("error code is std::StdErr.ok (%i)", e.code)
-        if msg != "" { s += sprintf("\nreason: '%s'", msg) }
-        return a.failAssertion(s)
-    }
-
-    return true
-}
-
-//~~ fn (^Context) assert.sameType
-// Asserts that `a` and `b` have the same type.
-// If the resulting `bool` is false, the caller should return immediately.
-// If `msg` is not `""`, prints an extra reason alongside the error.
-fn (a: ^Assertions) sameType*(va, vb: any, msg: str = ""): bool {
-//~~
-    a.startAssertion()
-
-    if !selftypeeq(va, vb) {
-        s := sprintf("expected %v and %v to have the same type", va, vb)
-        if msg != "" { s += sprintf("\nreason: '%s'", msg)}
-        return a.failAssertion(s)
-    }
-
-    return true
-}
-
-//~~fn (^Context) registerTest
-// Registers a single new test.
-// Will exit the program with an error message
-// if the name is already registered with this context.
 fn (c: ^Context) registerTest*(name: str, func: TestFn) {
-//~~
-    e := sprintf("test '%s' already registered", name)
-    for _, t^ in c.tests { std::assert(name != t.name, e) }
-    c.tests = append(c.tests, TestInfo{ name: name, func: func })
+	c.registerTestEntry({name, func})
 }
 
-//~~fn (^Context) registerTests
-// Registers various tests consecutively.
-// Will exit the program with an error message
-// if any of the names in `tests` are already registered with this context.
-fn (c: ^Context) registerTests*(tests: []TestInfo) {
-//~~
-    for _, t in tests {
-        // in case it was set, since it's checked for later
-        t.result.msg = ""
-
-        n := t.name
-        e := sprintf("test '%s' already registered", n)
-        for _, u^ in c.tests { std::assert(n != u.name, e) }
-
-        c.tests = append(c.tests, t)
-    }
+fn (c: ^Context) registerTests*(tests: []TestEntry) {
+	for _, t in tests { c.registerTestEntry(t) }
 }
 
-//~~fn (^Context) run
-// Runs each of the tests registered to this context,
-// and returns whether any single one of them had an error.
-//
-// `quitIfErr` exits the application after every test is run,
-// if any single one of them threw an error.
-fn (c: ^Context) run*(quitIfErr: bool = true): bool {
-//~~
-    didFail := false
-    passedTests := 0
+fn (c: ^Context) run*(): TestResults {
+	libraryInit()
+	// TODO: should do this???
+	std::assert(!c.finished, "attempt to re-run tests")
 
-    if c.compactOutput { eprint("results: ") }
+	var results: TestResults
+	results.data = make([]SingleTestResult, len(c.queuedTests))
 
-    for _, t^ in c.tests {
-        c.current = t
+	for i, t^ in c.queuedTests {
+		var r: SingleTestResult
+		r.name = t.name
 
-        time := std::clock()
-        t.func(c)
-        t.time = std::clock() - time
+		c._.currentTestResult = &r
 
-        c.calledResultFn = false
+		// have as little ceremony as possible
+		start := std::clock()
+		t.func(c)
+		time := std::clock() - start
+		r.time = time
 
-        if len(c.customAsserts) != 0 {
-            loc := c.customAsserts[len(c.customAsserts)-1].trace[1]
-            eprintln(c.red("\n\n[FATAL] you missed a call to T.endCustom"))
-            eprint(sprintf("in function %s, line %i\nin file %s", loc.func, loc.line, loc.file))
-        }
+		results.data[i] = r
+		results.totalRuntime += time
+	}
 
-        if t.result.code != 0 {
-	        for i := 0; i < t.funcDepth; i++ {
-		        t.result.trace = delete(t.result.trace, len(t.result.trace)-1)
-	        }
-            didFail = true
-            if !c.compactOutput {
-                pos := t.result.trace[0]
-                eprint(sprintf("\nin file %s\nline %i", pos.file, pos.line))
-            }
-        } else {
-            if t.result.msg == "" { c.pass("passed") }
-            passedTests++
-        }
+	c.finished = true
+	c._.currentTestResult = null
 
-        if !c.compactOutput { eprintln(sprintf("\ntook %fms\n", t.time * 1000)) }
-    }
+	return results
+}
 
-    if c.compactOutput {
-        eprintln("\n")
-        if didFail {
-            eprintln(c.red(c.bold("failed tests:\n")))
+/////////////////////////////////////////////////////////////////////////////////////
 
-            // TODO: should loop through all tests again?
-            for _, t^ in c.tests {
-                if t.result.code == 0 { continue }
+type (
+	StyleTestFilter = enum (uint8) {
+		onlyFailedTests
+		allTests
+	}
 
-                msg := sprintf(
-                    "test '%s': %s",
-                    t.name, t.result.msg
-                )
+	ResultPrintStyle* = struct {
+		ascii, noColor: bool
+		noBulletpoints: bool
+		filter: StyleTestFilter
+		noTotalRuntime: bool
+	}
+)
 
-                pos := t.result.trace[t.funcDepth]
+type Icon = enum { success; fail }
 
-                eprintln(sprintf(
-                    "%s\nin file %s\nline %i, took %fms\n",
-                    c.red(msg), pos.file, pos.line, t.time * 1000
-                ))
-            }
-        }
-    }
+var (
+	asciiIcons: map[Icon]str
+	unicodeIcons: map[Icon]str
+)
 
-    l := len(c.tests)
-    text := sprintf("%i of %i tests passed", passedTests, l)
+var libraryInited: bool
+fn libraryInit() {
+	if libraryInited { return }
+	libraryInited = true
 
-    text = passedTests == l ? c.green(text) : c.red(text)
-    eprintln(c.bold(text))
+	unicodeIcons = {
+		.success: "✓",
+		.fail: "✗",
+	}
 
-    c.current = null
-    if quitIfErr && didFail { exit(-1) }
-    return didFail
+	asciiIcons = {
+		.success: "O",
+		.fail: "X",
+	}
+}
+
+fn printColorFor(i: Icon) {
+	col := 0
+	switch i {
+	case .success: col = 32
+	case .fail: col = 31
+	}
+	printf("\x1b[%dm", col)
+}
+
+fn turnOffColor() { printf("\x1b[m") }
+
+// TODO: split this function in parts
+fn printResults*(results: TestResults, style: ResultPrintStyle = {}) {
+	libraryInit()
+
+	if !style.noColor {
+		style.noColor = std::getenv("NO_COLOR") != "" 
+	}
+
+	icons := style.ascii ? asciiIcons : unicodeIcons
+
+	if !style.noBulletpoints {
+		for _, t in results.data {
+			state := len(t.errors) == 0 ? Icon.success : Icon.fail
+			if !style.noColor { printColorFor(state) }
+			printf("%s", icons[state])
+			turnOffColor()
+		}
+
+		printf("\n\n")
+	}
+
+	var prevState: Icon
+	for i, t in results.data {
+		state := len(t.errors) == 0 ? Icon.success : Icon.fail
+
+		if state == .success && style.filter == .onlyFailedTests { continue }
+
+		if !style.noColor { printColorFor(state) }
+		if i != 0 && prevState != state && state == .fail { printf("\n") }
+		printf("%s %s  %.3fs", icons[state], t.name, t.time)
+
+		if state == .fail {
+			for i, res in t.errors {
+				if !style.noColor { printColorFor(state) }
+				l := t.locations[i]
+				printf("\n%s", res.msg)
+				turnOffColor()
+				printf("\n%s:%d (%s)", l.file, l.line, l.func)
+			}
+			printf("\n")
+		}
+
+		printf("\n")
+		prevState = state
+	}
+
+	turnOffColor()
+	if !style.noTotalRuntime {
+		printf("\ntotal suite runtime: %.3fs\n", results.totalRuntime)
+	}
 }

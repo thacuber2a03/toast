@@ -1,118 +1,81 @@
-// testing the test framework //
-// so meta                    //
+// testing the tester            //
+// the framework loops on itself //
+// finish this haiku             //
 
-import ( "std.um"; "toast.um" )
+import (
+	"std.um"
 
-fn alwaysPass(T: ^toast::Context) {
-    if !T.assert.isTrue(1 + 2 == 3, "math doesn't work") { return }
+	"toast.um"
+)
+
+fn passingTest1(ctx: ^toast::Context) {
+	if !ctx.assertTrue(1 + 2 == 3, "math does not work") { return }
 }
 
-fn alwaysFail(T: ^toast::Context) {
-    if !T.assert.isTrue(false, "logic works") { return }
+fn passingTest2(ctx: ^toast::Context) {
+	f, err := std::fopen("toast.um", "rb")
+	if !ctx.assertOk(err, "this should NOT HAPPEN") { return }
 }
 
-const nonExistentFile = "AJHSKJHDSKhdksjhdsjhsd.txt"
-
-fn failOnNonExistentFile(T: ^toast::Context) {
-    f, e := std::fopen(nonExistentFile, "rb")
-
-    msg := "couldn't open non-existent file (as it's supposed to do)"
-    if !T.assert.isOk(e, msg) { return }
+fn passingTest3(ctx: ^toast::Context) {
+	if !ctx.assertEqualTypes(any(1), any(2), "how are they not numbers") { return }
 }
 
-fn passOnNonExistentFile(T: ^toast::Context) {
-    f, e := std::fopen(nonExistentFile, "rb")
-
-    msg := "somehow opened assumed-non-existent file (why does it exist in your machine, and what does it contain)"
-    if !T.assert.isErr(e, msg) { return }
+fn passingTest4(ctx: ^toast::Context) {
+	ctx.assertTrue(false)
+	ctx.pass() // forced pass
 }
 
-fn passOnExistentFile(T: ^toast::Context) {
-    f, e := std::fopen("toast.um", "rb")
-
-    if !T.assert.isOk(e, "this should NOT HAPPEN") { return }
-
-    std::fclose(f)
+fn failingTest1(ctx: ^toast::Context) {
+	ctx.assertFalse(1 + 2 == 3, "math works")
+	ctx.assertFalse(2 + 2 == 4, "math works again")
 }
 
-fn assertEqual(T: ^toast::Context, a, b: int): bool {
-    T.startCustom()
-    return T.endCustom(T.assert.isTrue(
-        a == b, "expected a and b to be equal"
-    ))
+fn failingTest2(ctx: ^toast::Context) {
+	f, err := std::fopen("lasjdlaskjdlaskjdalsdjalskdjlasjdlasjdl", "rb")
+	if !ctx.assertOk(err, "this should, indeed, happen 👍") { return }
 }
 
-fn customAssert(T: ^toast::Context) {
-    if !assertEqual(T, 1, 1) { return }
-    if !assertEqual(T, 1, 2) { T.pass(); return }
+fn failingTest3(ctx: ^toast::Context) {
+	if !ctx.assertEqualTypes(any(false), any(2),
+		"thankfully they're not numbers-"+
+		" well, no, one of them is a number but wtv") { return }
 }
 
-fn assertSquare(T: ^toast::Context, n, s: int): bool {
-    T.startCustom()
-
-    if n * n != s {
-        return T.endCustom(T.fail(sprintf("%v squared does not equal %v", n, s)))
-    }
-
-    return T.endCustom(true)
-}
-
-fn customLogic(T: ^toast::Context) {
-    if !assertSquare(T, 3, 9 ) { return }
-    if !assertSquare(T, 3, 10) { return }
-}
-
-fn assertTypes(T: ^toast::Context) {
-    if !T.assert.sameType(42, 90)           { return }
-    if !T.assert.sameType("hello", "world") { return }
-}
-
-fn testToast(T: ^toast::Context) {
-    expected := map[str]bool{
-        "always pass": true,
-        "always fail": false,
-        "fake file": false,
-        "real file": true,
-        "custom assertion": true,
-        "custom logic": false,
-        "assert types": true
-    }
-
-    U := toast::newContext()
-    U.printWithColor = true
-    U.registerTests({
-        { name: "always pass",      func: alwaysPass            },
-        { name: "always fail",      func: alwaysFail            },
-        { name: "fake file",        func: failOnNonExistentFile },
-        { name: "real file",        func: passOnExistentFile    },
-        { name: "custom assertion", func: customAssert          },
-        { name: "custom logic",     func: customLogic           },
-        { name: "assert types",     func: assertTypes           }
-    })
-    U.run(false)
-    fprintf(std::stderr(), "\n")
-
-    for _, r in U.tests {
-        n := r.name
-        state := (r.result.code == 0)
-        if state != expected[n] {
-            s := sprintf(
-                "expected '%s' to %s, but it %s",
-                n, expected[n] ? "pass" : "fail",
-                state ? "passed": "failed"
-            )
-            T.fail(s)
-            return
-        }
-    }
+fn failingTest4(ctx: ^toast::Context) {
+	ctx.assertTrue(false)
+	// ctx.pass() // no forced pass???? idk
 }
 
 fn main() {
-    T := toast::newContext()
+	var ctx: toast::Context
 
-    T.compactOutput = false
-    T.printWithColor = true
+	ctx.registerTests({
+		{ name: "failing test 1", func: failingTest1 },
+		{ name: "failing test 2", func: failingTest2 },
+	})
 
-    T.registerTest("toast itself", testToast)
-    T.run()
+	ctx.registerTest("passing test 1", passingTest1)
+
+	ctx.registerTests({
+		{ name: "failing test 4", func: failingTest4 },
+	})
+
+	ctx.registerTests({
+		{ name: "passing test 3", func: passingTest3 },
+		{ name: "passing test 4", func: passingTest4 },
+	})
+
+	ctx.registerTest("failing test 3", failingTest3)
+
+	ctx.registerTest("passing test 2", passingTest2)
+
+	results := ctx.run()
+	toast::printResults(results, {
+		// noColor: true,
+		// ascii: true,
+		// noBulletpoints: true,
+		filter: .allTests,
+		noTotalRuntime: true,
+	})
 }

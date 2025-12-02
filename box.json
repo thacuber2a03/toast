@@ -1,16 +1,15 @@
 {
-	"name": "toast",
-	"version": "v0.5.0",
-	"author": "@thacuber2a03",
-	"license": "BSD 3-Clause Revised",
-	"homepage": "https://github.com/thacuber2a03/toast",
-	"description": "A small, no-dependency testing framework for Umka.",
-	"readme": "README.md",
-	"dependencies": [
-	],
-	"include": [
-		"LICENSE",
-		"toast.um"
-	],
-	"source": "https://github.com/thacuber2a03/toast"
+    "name": "toast",
+    "version": "v0.6.0",
+    "author": "@thacuber2a03",
+    "license": "BSD 3-Clause Revised",
+    "homepage": "https://github.com/thacuber2a03/toast",
+    "description": "A small, no-dependency testing framework for Umka.",
+    "readme": "README.md",
+    "dependencies": [],
+    "include": [
+        "LICENSE",
+        "toast.um"
+    ],
+    "source": "https://github.com/thacuber2a03/toast"
 }
