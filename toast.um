@@ -197,7 +197,7 @@ fn (a: ^Assertions) isFalse*(cond: bool, msg: str = ""): bool {
 }
 
 //~~fn (^Context) assert.isOk
-// Asserts that `e`'s code is 0.
+// Asserts that `e`'s code is `std::StdErr.ok`.
 // If the resulting `bool` is false, the caller should return immediately.
 //
 // If `msg` is not `""`, prints an extra reason alongside the error.
@@ -218,7 +218,7 @@ fn (a: ^Assertions) isOk*(e: std::Err, msg: str = ""): bool {
 }
 
 //~~fn (^Context) assert.isErr
-// Asserts that `e`'s code is *not* 0.
+// Asserts that `e`'s code is *not* `std::StdErr.ok`.
 // If the resulting `bool` is false, the caller should return immediately.
 //
 // If `msg` is not `""`, prints an extra reason alongside the error.
@@ -254,7 +254,8 @@ fn (a: ^Assertions) sameType*(va, vb: any, msg: str = ""): bool {
 
 //~~fn (^Context) registerTest
 // Registers a single new test.
-// Will throw a fatal error if the name is already registered with this context.
+// Will exit the program with an error message
+// if the name is already registered with this context.
 fn (c: ^Context) registerTest*(name: str, func: TestFn) {
 //~~
     e := sprintf("test '%s' already registered", name)
@@ -264,7 +265,8 @@ fn (c: ^Context) registerTest*(name: str, func: TestFn) {
 
 //~~fn (^Context) registerTests
 // Registers various tests consecutively.
-// Will throw a fatal error if any of the keys are registered as names for tests with this context.
+// Will exit the program with an error message
+// if any of the names in `tests` are already registered with this context.
 fn (c: ^Context) registerTests*(tests: []TestInfo) {
 //~~
     for _, t in tests {
