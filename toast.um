@@ -32,8 +32,8 @@ type (
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-fn getStackFrame(i: int = 2): std::ErrPos {
-	return std::error(-1).trace[i] // help
+fn getStackFrame(i: int = 0): std::ErrPos {
+	return std::error(-1).trace[2+i] // help
 }
 
 fn (c: ^Context) internalFail(msg: str, loc: std::ErrPos, error: str): bool {
@@ -61,7 +61,7 @@ fn (c: ^Context) pass*(): bool {
 }
 
 fn (c: ^Context) assertBase(ok: bool, msg: str): bool {
-	if !ok { c.internalFail(msg, getStackFrame(3), "assertion failed") }
+	if !ok { c.internalFail(msg, getStackFrame(1), "assertion failed") }
 	return ok
 }
 
@@ -224,9 +224,9 @@ fn printResults*(results: TestResults, style: ResultPrintStyle = {}) {
 		printf("%s %s  %.3fs", icons[state], t.name, t.time)
 
 		if state == .fail {
-			for i, res in t.errors {
+			for j, res in t.errors {
 				if !style.noColor { printColorFor(state) }
-				l := t.locations[i]
+				l := t.locations[j]
 				printf("\n%s", res.msg)
 				turnOffColor()
 				printf("\n%s:%d (%s)", l.file, l.line, l.func)
