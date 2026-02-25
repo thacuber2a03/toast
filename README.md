@@ -1,3 +1,9 @@
+In-progress rewrite from scratch of the library. Check the [`master`](https://github.com/thacuber2a03/toast/tree/master) branch for the "stable" version.
+
+The README for the stable version follows.
+
+---
+
 # toast
 
 A small testing framework with no dependencies written in
